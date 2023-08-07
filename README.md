@@ -51,7 +51,7 @@ Lorem ipsum.
 [downloads-img]:https://img.shields.io/npm/dt/develop/qualifire-typescript-sdk
 [downloads-url]:https://www.npmtrends.com/develop/qualifire-typescript-sdk
 [npm-img]:https://img.shields.io/npm/v/develop/qualifire-typescript-sdk
-[npm-url]:https://www.npmjs.com/package/develop/qualifire-typescript-sdk
+[npm-url]:https://www.npmjs.com/package/develop/qualifire
 [issues-img]:https://img.shields.io/github/issues/drorivry/develop/qualifire-typescript-sdk
 [issues-url]:https://github.com/drorivry/develop/qualifire-typescript-sdk/issues
 [codecov-img]:https://codecov.io/gh/drorivry/develop/qualifire-typescript-sdk/branch/main/graph/badge.svg
