@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ryansonshine/typescript-npm-package-template.git"
+    "url": "git+https://github.com/drorivry/qualifire-typescript-sdk.git"
   },
   "license": "MIT",
   "author": {
