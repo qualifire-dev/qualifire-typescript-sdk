@@ -1,7 +1,7 @@
 {
   "name": "qualifire",
-  "version": "0.0.0-development",
-  "description": "A template for creating npm packages using TypeScript and VSCode",
+  "version": "0.0.1",
+  "description": "Qualifire client SDK",
   "main": "./lib/index.js",
   "files": [
     "lib/**/*"
