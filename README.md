@@ -18,32 +18,23 @@ npm install my-package-name
 ## Usage
 
 ```ts
-import { myPackage } from 'my-package-name';
+import * as qualifire from 'qualifire';
 
-myPackage('hello');
-//=> 'hello from my package'
+const qualifireClient = qualifire.getClient('#YOUR-SDK-KEY#');
+
+const prompt = await qualifireClient.getValueAsync(
+  'isMyAwesomeFeatureEnabled',
+  {
+    var1: 'val1',
+    var2: 'val2',
+  }
+);
+
+const chatCompletion = await openai.createChatCompletion({
+  model: 'gpt-3.5-turbo',
+  messages: [{ role: 'user', content: prompt }],
+});
 ```
-
-## API
-
-### myPackage(input, options?)
-
-#### input
-
-Type: `string`
-
-Lorem ipsum.
-
-#### options
-
-Type: `object`
-
-##### postfix
-
-Type: `string`
-Default: `rainbows`
-
-Lorem ipsum.
 
 [build-img]: https://github.com/drorivry/develop/qualifire-typescript-sdk/actions/workflows/release.yml/badge.svg
 [build-url]: https://github.com/drorivry/qualifire-typescript-sdk/actions/workflows/release.yml
