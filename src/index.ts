@@ -46,11 +46,14 @@ class QualifireClient {
       console.error('error while getting the prompt', qualifireResponse.json());
       return defaultValue;
     }
-
-    const { prompt, templateVariables } = (await qualifireResponse.json()) as {
+    const regex = /\{[a-zA-Z0-9_-]+\}/gm;
+    const { prompt } = (await qualifireResponse.json()) as {
       prompt: string;
-      templateVariables?: string[];
     };
+    const templateVariables = prompt
+      .match(regex)
+      ?.map(v => v.replace('{', '').replace('}', ''));
+
     let parsedPrompt: string = prompt;
     if (templateValues && templateVariables) {
       for (const variable of templateVariables) {
