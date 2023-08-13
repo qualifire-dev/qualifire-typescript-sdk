@@ -65,6 +65,6 @@ class QualifireClient {
       return parsedPrompt;
     }
 
-    return defaultValue;
+    return prompt || defaultValue;
   }
 }
