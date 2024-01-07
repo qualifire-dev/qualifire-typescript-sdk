@@ -22,7 +22,7 @@ jobs:
           version: 8
           run_install: false
       - run: pnpm i
-      - run: pnpm build --if-present
+      - run: pnpm build
       - run: pnpm test
       - name: Upload Code Coverage
         uses: codecov/codecov-action@v3.1.0
