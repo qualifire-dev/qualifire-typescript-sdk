@@ -20,7 +20,7 @@ export class Qualifire {
    * @param apiKey - The API key for the Qualifire SDK.
    * @param baseUrl - The base URL for the Qualifire API.
    */
-  constructor({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
+  constructor({ apiKey, baseUrl }: { apiKey?: string; baseUrl?: string }) {
     const key = apiKey || process.env.QUALIFIRE_API_KEY;
     const qualifireBaseUrl =
       baseUrl ||
