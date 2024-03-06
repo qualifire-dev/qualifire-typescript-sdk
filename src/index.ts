@@ -37,21 +37,14 @@ export class Qualifire {
     this.baseUrl = qualifireBaseUrl;
   }
 
-  /**
-   * Evaluates the input and output using the Qualifire API.
-   * @param input - The input data for evaluation.
-   * @param output - The expected output data for evaluation.
-   * @param options - Additional options for evaluation.
-   * @returns A promise that resolves to the evaluation response.
-   */
   evaluate = async (
     input: Input,
     output: Output,
     {
-      async = false,
+      async,
     }: {
       async?: boolean;
-    }
+    } = {}
   ): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluate/v1`;
     const body = JSON.stringify({ async, input, output });
