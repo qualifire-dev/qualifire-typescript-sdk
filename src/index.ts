@@ -1,70 +1,89 @@
-export function getClient(
-  sdkKey?: string,
-  qualifireBaseUrl?: string
-): QualifireClient {
-  const key = sdkKey || process.env.QUALIFIRE_SDK_KEY;
-  const baseUrl =
-    qualifireBaseUrl ||
-    process.env.QUALIFIRE_BASE_URL ||
-    'https://app.qualifire.xyz';
+import {
+  EvaluationResponse,
+  Input,
+  Output,
+  evaluationResponseSchema,
+} from './types';
 
-  if (!key) {
-    throw new Error(
-      'Missing SDK key, please provide an arg or add the QUALIFIRE_SDK_KEY environment variable.'
-    );
-  }
-
-  return new QualifireClient(key, baseUrl);
-}
-
-class QualifireClient {
+/**
+ * Represents the Qualifire SDK.
+ */
+/**
+ * The Qualifire class represents the Qualifire SDK.
+ */
+export class Qualifire {
   sdkKey: string;
   baseUrl: string;
 
-  constructor(key: string, baseUrl: string) {
+  /**
+   * Creates an instance of the Qualifire class.
+   * @param apiKey - The API key for the Qualifire SDK.
+   * @param baseUrl - The base URL for the Qualifire API.
+   */
+  constructor({ apiKey, baseUrl }: { apiKey: string; baseUrl: string }) {
+    const key = apiKey || process.env.QUALIFIRE_API_KEY;
+    const qualifireBaseUrl =
+      baseUrl ||
+      process.env.QUALIFIRE_BASE_URL ||
+      'https://gateway.qualifire.ai';
+
+    if (!key) {
+      throw new Error(
+        'Missing SDK key, please provide an arg or add the QUALIFIRE_API_KEY environment variable.'
+      );
+    }
+
     this.sdkKey = key;
-    this.baseUrl = baseUrl;
+    this.baseUrl = qualifireBaseUrl;
   }
 
-  async getValueAsync(
-    promptId: string,
-    templateValues?: Record<string, string>,
-    defaultValue: string | null = null
-  ) {
-    const qualifireResponse = await fetch(
-      `${this.baseUrl}/api/studio/prompt?${new URLSearchParams({
-        promptId,
-      }).toString()}`,
-      {
-        headers: new Headers({
-          Authorization: 'Bearer ' + this.sdkKey,
-        }),
-      }
-    );
-
-    if (!qualifireResponse.ok) {
-      console.error('error while getting the prompt', qualifireResponse.json());
-      return defaultValue;
+  /**
+   * Evaluates the input and output using the Qualifire API.
+   * @param input - The input data for evaluation.
+   * @param output - The expected output data for evaluation.
+   * @param options - Additional options for evaluation.
+   * @returns A promise that resolves to the evaluation response.
+   */
+  evaluate = async (
+    input: Input,
+    output: Output,
+    {
+      async = false,
+    }: {
+      async?: boolean;
     }
-    const regex = /\{[a-zA-Z0-9_-]+\}/gm;
-    const { prompt } = (await qualifireResponse.json()) as {
-      prompt: string;
+  ): Promise<EvaluationResponse | undefined> => {
+    const url = `${this.baseUrl}/api/evaluate/v1`;
+    const body = JSON.stringify({ async, input, output });
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-qualifire-key': this.sdkKey,
     };
-    const templateVariables = prompt
-      .match(regex)
-      ?.map(v => v.replace('{', '').replace('}', ''));
+    if (async) {
+      void fetch(url, {
+        method: 'POST',
+        headers,
+        body,
+      });
+    } else {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body,
+      });
 
-    let parsedPrompt: string = prompt;
-    if (templateValues && templateVariables) {
-      for (const variable of templateVariables) {
-        parsedPrompt = parsedPrompt.replaceAll(
-          `{${variable}}`,
-          templateValues[variable] || ''
-        );
+      if (!response.ok) {
+        throw new Error(`Qualifire API error: ${response.statusText}`);
       }
-      return parsedPrompt;
-    }
 
-    return prompt || defaultValue;
-  }
+      const jsonResponse = await response.json();
+
+      const parsed = evaluationResponseSchema.safeParse(jsonResponse);
+      if (!parsed.success) {
+        throw new Error('Qualifire API error: Evaluation failed');
+      }
+
+      return parsed.data;
+    }
+  };
 }
