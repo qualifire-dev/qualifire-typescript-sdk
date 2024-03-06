@@ -46,7 +46,7 @@ export class Qualifire {
       async?: boolean;
     } = {}
   ): Promise<EvaluationResponse | undefined> => {
-    const url = `${this.baseUrl}/api/evaluate/v1`;
+    const url = `${this.baseUrl}/api/evaluation/v1`;
     const body = JSON.stringify({ async, input, output });
     const headers = {
       'Content-Type': 'application/json',
