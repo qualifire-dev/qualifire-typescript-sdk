@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const messageSchema = z.object({
   role: z.string(),
-  content: z.string(),
+  content: z.string().nullable(),
 });
 
 export const choiceSchema = z.object({
