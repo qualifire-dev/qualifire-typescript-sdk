@@ -23,7 +23,7 @@ export const inputSchema = z.object({
   caller: z.string().optional(),
 });
 
-export type Input = z.infer<typeof inputSchema>;
+export type Input = z.infer<typeof inputSchema> | string;
 
 export const outputSchema = z.object({
   id: z.string(),
@@ -34,7 +34,7 @@ export const outputSchema = z.object({
   system_fingerprint: z.string().optional(),
 });
 
-export type Output = z.infer<typeof outputSchema>;
+export type Output = z.infer<typeof outputSchema> | string;
 
 export const evaluationSchema = z.object({
   async: z.boolean(),

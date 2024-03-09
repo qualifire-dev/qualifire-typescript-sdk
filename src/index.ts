@@ -5,6 +5,8 @@ import {
   evaluationResponseSchema,
 } from './types';
 
+import type { Stream } from 'openai/streaming';
+
 /**
  * Represents the Qualifire SDK.
  */
@@ -79,4 +81,11 @@ export class Qualifire {
       return parsed.data;
     }
   };
+
+  // private handleStream = async (outputStream: Stream<any>) => {
+  //   const [consumerStream, loggingStream] = outputStream.tee();
+
+  //   for await (const message of consumerStream) {
+  //   }
+  // };
 }
