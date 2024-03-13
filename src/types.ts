@@ -43,17 +43,17 @@ export const evaluationSchema = z.object({
 });
 
 const resultSchema = z.object({
-  claim: z.string(),
-  contradiction: z.boolean(),
-  passed: z.boolean(),
-  matchScore: z.number(),
-  reason: z.string(),
+  claim: z.string().optional(),
+  contradiction: z.boolean().optional(),
+  passed: z.boolean().optional(),
+  matchScore: z.number().optional(),
+  reason: z.string().optional(),
   quote: z.string().optional(),
-  includedInContent: z.boolean(),
-  monitorId: z.string(),
-  createdAt: z.string(),
-  organizationId: z.string(),
-  callId: z.string(),
+  includedInContent: z.boolean().optional(),
+  monitorId: z.string().optional(),
+  createdAt: z.string().optional(),
+  organizationId: z.string().optional(),
+  callId: z.string().optional(),
   label: z.string().optional(),
 });
 
