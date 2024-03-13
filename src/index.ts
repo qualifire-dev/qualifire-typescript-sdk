@@ -73,12 +73,12 @@ export class Qualifire {
 
       const jsonResponse = await response.json();
 
-      const parsed = evaluationResponseSchema.safeParse(jsonResponse);
-      if (!parsed.success) {
-        throw new Error('Qualifire API error: Evaluation failed');
-      }
+      // const parsed = evaluationResponseSchema.safeParse(jsonResponse);
+      // if (!parsed.success) {
+      //   throw new Error('Qualifire API error: Evaluation failed');
+      // }
 
-      return parsed.data;
+      return jsonResponse as EvaluationResponse;
     }
   };
 
