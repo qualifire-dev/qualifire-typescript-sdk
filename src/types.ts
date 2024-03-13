@@ -48,12 +48,13 @@ const resultSchema = z.object({
   passed: z.boolean(),
   matchScore: z.number(),
   reason: z.string(),
-  quote: z.string(),
+  quote: z.string().optional(),
   includedInContent: z.boolean(),
   monitorId: z.string(),
   createdAt: z.string(),
   organizationId: z.string(),
   callId: z.string(),
+  label: z.string().optional(),
 });
 
 const evaluationResultSchema = z.object({
