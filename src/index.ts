@@ -76,17 +76,17 @@ export class Qualifire {
     promptInjections = false,
     sexualContentCheck = false,
   }: {
-    input: Input;
-    output: Output;
-    assertions: string[];
-    consistencyCheck: boolean;
-    dangerousContentCheck: boolean;
-    hallucinationsCheck: boolean;
-    harassmentCheck: boolean;
-    hateSpeechCheck: boolean;
-    piiCheck: boolean;
-    promptInjections: boolean;
-    sexualContentCheck: boolean;
+    input: string;
+    output: string;
+    assertions?: string[];
+    consistencyCheck?: boolean;
+    dangerousContentCheck?: boolean;
+    hallucinationsCheck?: boolean;
+    harassmentCheck?: boolean;
+    hateSpeechCheck?: boolean;
+    piiCheck?: boolean;
+    promptInjections?: boolean;
+    sexualContentCheck?: boolean;
   }): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = JSON.stringify({
