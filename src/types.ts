@@ -36,46 +36,46 @@ export const outputSchema = z.object({
 
 export type Output = z.infer<typeof outputSchema> | string;
 
-export const evaluationSchema = z.object({
-  async: z.boolean(),
-  input: inputSchema,
-  output: outputSchema,
+const LLMMessageSchema = z.object({
+  content: z.string(),
+  role: z.string(),
 });
 
-const resultSchema = z.object({
-  claim: z.string().optional(),
-  contradiction: z.boolean().optional(),
-  passed: z.boolean().optional(),
-  matchScore: z.number().optional(),
-  reason: z.string().optional(),
-  quote: z.string().optional(),
-  includedInContent: z.boolean().optional(),
-  monitorId: z.string().optional(),
-  createdAt: z.string().optional(),
-  organizationId: z.string().optional(),
-  callId: z.string().optional(),
-  label: z.string().optional(),
+const EvaluationRequestSchema = z.object({
+  input: z.string(),
+  output: z.string(),
+  consistency_check: z.boolean(),
+  dangerous_content_check: z.boolean(),
+  hallucinations_check: z.boolean(),
+  harassment_check: z.boolean(),
+  hate_speech_check: z.boolean(),
+  pii_check: z.boolean(),
+  prompt_injections: z.boolean(),
+  sexual_content_check: z.boolean(),
+  messages: z.array(LLMMessageSchema).optional(),
+  assertions: z.array(z.string()).optional(),
 });
 
-const evaluationResultSchema = z.object({
+const EvaluationResultSchema = z.object({
+  claim: z.string(),
+  confidence_score: z.number(),
+  label: z.string(),
+  name: z.string(),
+  quote: z.string(),
+  reason: z.string(),
+  score: z.number(),
+});
+
+const EvaluationResultItemSchema = z.object({
+  results: z.array(EvaluationResultSchema),
   type: z.string(),
-  results: z.array(resultSchema),
 });
 
-const scoreBreakdownItemSchema = z.object({
-  length: z.number(),
-  scoreSum: z.number(),
-});
-
-const scoreBreakdownSchema = z.record(scoreBreakdownItemSchema);
-
-export const evaluationResponseSchema = z.object({
-  success: z.boolean(),
-  evaluationResults: z.array(evaluationResultSchema),
+const EvaluationResponseSchema = z.object({
+  evaluationResults: z.array(EvaluationResultItemSchema),
   score: z.number(),
   status: z.string(),
-  scoreBreakdown: scoreBreakdownSchema,
 });
 
-export type Evaluation = z.infer<typeof evaluationSchema>;
-export type EvaluationResponse = z.infer<typeof evaluationResponseSchema>;
+export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
+export type EvaluationRequestSchema = z.infer<typeof EvaluationRequestSchema>;
