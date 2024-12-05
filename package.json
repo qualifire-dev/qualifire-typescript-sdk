@@ -54,7 +54,7 @@
     "husky": "^6.0.0",
     "jest": "^27.2.0",
     "lint-staged": "^13.2.1",
-    "prettier": "^2.2.1",
+    "prettier": "^3.2.5",
     "semantic-release": "^21.0.1",
     "ts-jest": "^27.0.5",
     "ts-node": "^10.2.1",
