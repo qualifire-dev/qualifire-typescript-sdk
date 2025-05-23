@@ -1,4 +1,9 @@
-import type { EvaluationResponse, Input, Output } from './types';
+import type {
+  EvaluationRequest,
+  EvaluationResponse,
+  Input,
+  Output,
+} from './types';
 
 /**
  * Represents the Qualifire SDK.
@@ -32,17 +37,7 @@ export class Qualifire {
   /**
    * Evaluates the output of a model against a set of criteria.
    *
-   * @param input - The input to the model.
-   * @param output - The output of the model.
-   * @param assertions - An array of assertions to check.
-   * @param consistencyCheck - Whether to check for consistency.
-   * @param dangerousContentCheck - Whether to check for dangerous content.
-   * @param hallucinationsCheck - Whether to check for hallucinations.
-   * @param harassmentCheck - Whether to check for harassment.
-   * @param hateSpeechCheck - Whether to check for hate speech.
-   * @param piiCheck - Whether to check for personally identifiable information.
-   * @param promptInjections - Whether to check for prompt injections.
-   * @param sexualContentCheck - Whether to check for sexual content.
+   * @param request - The EvaluationRequest to send.
    * @returns An object containing the evaluation results.
    *
    * @example
@@ -63,45 +58,12 @@ export class Qualifire {
    * });
    * ```
    */
-  evaluate = async ({
-    input,
-    output,
-    assertions = [],
-    consistencyCheck = false,
-    dangerousContentCheck = false,
-    hallucinationsCheck = false,
-    harassmentCheck = false,
-    hateSpeechCheck = false,
-    piiCheck = false,
-    promptInjections = false,
-    sexualContentCheck = false,
-  }: {
-    input: string;
-    output: string;
-    assertions?: string[];
-    consistencyCheck?: boolean;
-    dangerousContentCheck?: boolean;
-    hallucinationsCheck?: boolean;
-    harassmentCheck?: boolean;
-    hateSpeechCheck?: boolean;
-    piiCheck?: boolean;
-    promptInjections?: boolean;
-    sexualContentCheck?: boolean;
-  }): Promise<EvaluationResponse | undefined> => {
+  evaluate = async (
+    request: EvaluationRequest
+  ): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
-    const body = JSON.stringify({
-      input,
-      output,
-      assertions,
-      consistency_check: consistencyCheck,
-      dangerous_content_check: dangerousContentCheck,
-      hallucinations_check: hallucinationsCheck,
-      harassment_check: harassmentCheck,
-      hate_speech_check: hateSpeechCheck,
-      pii_check: piiCheck,
-      prompt_injections: promptInjections,
-      sexual_content_check: sexualContentCheck,
-    });
+    const body = JSON.stringify(request);
+
     const headers = {
       'Content-Type': 'application/json',
       'X-Qualifire-API-Key': this.sdkKey,
