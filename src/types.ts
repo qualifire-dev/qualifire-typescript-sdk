@@ -36,25 +36,86 @@ export const outputSchema = z.object({
 
 export type Output = z.infer<typeof outputSchema> | string;
 
-const LLMMessageSchema = z.object({
-  content: z.string(),
-  role: z.string(),
+const LLMToolDefinitionSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  parameters: z.record(z.string(), z.any()),
 });
 
-const EvaluationRequestSchema = z.object({
-  input: z.string(),
-  output: z.string(),
-  consistency_check: z.boolean(),
-  dangerous_content_check: z.boolean(),
-  hallucinations_check: z.boolean(),
-  harassment_check: z.boolean(),
-  hate_speech_check: z.boolean(),
-  pii_check: z.boolean(),
-  prompt_injections: z.boolean(),
-  sexual_content_check: z.boolean(),
-  messages: z.array(LLMMessageSchema).optional(),
-  assertions: z.array(z.string()).optional(),
+const LLMToolCallSchema = z.object({
+  name: z.string(),
+  arguments: z.record(z.string(), z.any()),
+  id: z.string().optional(),
 });
+
+const LLMMessageSchema = z.object({
+  role: z.string(),
+  content: z.string(),
+  tool_calls: z.array(LLMToolCallSchema).optional(),
+});
+
+const SyntaxCheckArgsSchema = z.object({
+  args: z.string(),
+});
+
+export const EvaluationRequestSchema = z
+  .object({
+    input: z.string().optional(),
+    output: z.string().optional(),
+    messages: z.array(LLMMessageSchema).optional(),
+    available_tools: z.array(LLMToolDefinitionSchema).optional(),
+    dangerous_content_check: z.boolean(),
+    grounding_check: z.boolean(),
+    hallucinations_check: z.boolean(),
+    harassment_check: z.boolean(),
+    hate_speech_check: z.boolean(),
+    instructions_following_check: z.boolean(),
+    pii_check: z.boolean(),
+    prompt_injections: z.boolean(),
+    sexual_content_check: z.boolean(),
+    syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+    tool_selection_quality_check: z.boolean(),
+    assertions: z.array(z.string()).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasMessages =
+      Array.isArray(data.messages) && data.messages.length > 0;
+    const hasInput = typeof data.input === 'string' && data.input.trim() !== '';
+    const hasOutput =
+      typeof data.output === 'string' && data.output.trim() !== '';
+
+    // Validation: At least one of messages, input, or output
+    if (!hasMessages && !hasInput && !hasOutput) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'At least one of messages, input, or output must be set',
+        path: [], // Top level
+      });
+    }
+
+    // Validation: tool_selection_quality_check requires messages and available_tools
+    if (data.tool_selection_quality_check) {
+      const hasAvailableTools =
+        Array.isArray(data.available_tools) && data.available_tools.length > 0;
+
+      if (!hasMessages) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'messages must be provided when tool_selection_quality_check is true',
+          path: ['messages'],
+        });
+      }
+      if (!hasAvailableTools) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            'available_tools must be provided when tool_selection_quality_check is true',
+          path: ['available_tools'],
+        });
+      }
+    }
+  });
 
 const EvaluationResultSchema = z.object({
   claim: z.string(),
@@ -78,4 +139,4 @@ const EvaluationResponseSchema = z.object({
 });
 
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
-export type EvaluationRequestSchema = z.infer<typeof EvaluationRequestSchema>;
+export type EvaluationRequest = z.infer<typeof EvaluationRequestSchema>;
