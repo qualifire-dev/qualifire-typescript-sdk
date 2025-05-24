@@ -36,12 +36,13 @@ export class Qualifire {
     process.env.TRACELOOP_TELEMETRY = 'false';
 
     traceloop.initialize({
-      baseUrl: `${this.baseUrl}/telemetry`,
+      baseUrl: `${this.baseUrl}/api/telemetry`,
       headers: {
         'X-Qualifire-API-Key': this.sdkKey,
       },
       traceloopSyncEnabled: false,
       silenceInitializationMessage: true,
+      disableBatch: true,
     });
   }
 
