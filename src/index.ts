@@ -1,9 +1,5 @@
-import type {
-  EvaluationRequest,
-  EvaluationResponse,
-  Input,
-  Output,
-} from './types';
+import type { EvaluationRequest, EvaluationResponse } from './types';
+import * as traceloop from '@traceloop/node-server-sdk';
 
 /**
  * Represents the Qualifire SDK.
@@ -32,6 +28,19 @@ export class Qualifire {
 
     this.sdkKey = key;
     this.baseUrl = qualifireBaseUrl;
+  }
+
+  init() {
+    process.env.TRACELOOP_TELEMETRY = 'false';
+
+    traceloop.initialize({
+      baseUrl: `${this.baseUrl}/telemetry`,
+      headers: {
+        'X-Qualifire-API-Key': this.sdkKey,
+      },
+      traceloopSyncEnabled: false,
+      silenceInitializationMessage: true,
+    });
   }
 
   /**
