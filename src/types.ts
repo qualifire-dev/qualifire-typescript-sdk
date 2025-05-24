@@ -50,7 +50,7 @@ const LLMToolCallSchema = z.object({
 
 const LLMMessageSchema = z.object({
   role: z.string(),
-  content: z.string(),
+  content: z.string().optional(),
   tool_calls: z.array(LLMToolCallSchema).optional(),
 });
 
@@ -64,17 +64,17 @@ export const EvaluationRequestSchema = z
     output: z.string().optional(),
     messages: z.array(LLMMessageSchema).optional(),
     available_tools: z.array(LLMToolDefinitionSchema).optional(),
-    dangerous_content_check: z.boolean(),
-    grounding_check: z.boolean(),
-    hallucinations_check: z.boolean(),
-    harassment_check: z.boolean(),
-    hate_speech_check: z.boolean(),
-    instructions_following_check: z.boolean(),
-    pii_check: z.boolean(),
-    prompt_injections: z.boolean(),
-    sexual_content_check: z.boolean(),
+    dangerous_content_check: z.boolean().default(false),
+    grounding_check: z.boolean().default(false),
+    hallucinations_check: z.boolean().default(false),
+    harassment_check: z.boolean().default(false),
+    hate_speech_check: z.boolean().default(false),
+    instructions_following_check: z.boolean().default(false),
+    pii_check: z.boolean().default(false),
+    prompt_injections: z.boolean().default(false),
+    sexual_content_check: z.boolean().default(false),
     syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
-    tool_selection_quality_check: z.boolean(),
+    tool_selection_quality_check: z.boolean().default(false),
     assertions: z.array(z.string()).optional(),
   })
   .superRefine((data, ctx) => {
@@ -138,5 +138,5 @@ const EvaluationResponseSchema = z.object({
   status: z.string(),
 });
 
+export type EvaluationRequest = z.input<typeof EvaluationRequestSchema>;
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
-export type EvaluationRequest = z.infer<typeof EvaluationRequestSchema>;

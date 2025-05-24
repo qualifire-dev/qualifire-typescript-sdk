@@ -1,5 +1,7 @@
-import type { EvaluationRequest, EvaluationResponse } from './types';
+import { EvaluationRequestSchema, type EvaluationRequest, type EvaluationResponse } from './types';
 import * as traceloop from '@traceloop/node-server-sdk';
+
+export { EvaluationRequest, EvaluationResponse } from './types';
 
 /**
  * Represents the Qualifire SDK.
@@ -70,8 +72,10 @@ export class Qualifire {
   evaluate = async (
     request: EvaluationRequest
   ): Promise<EvaluationResponse | undefined> => {
+    const parsedRequest = EvaluationRequestSchema.parse(request)
+
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
-    const body = JSON.stringify(request);
+    const body = JSON.stringify(parsedRequest);
 
     const headers = {
       'Content-Type': 'application/json',
