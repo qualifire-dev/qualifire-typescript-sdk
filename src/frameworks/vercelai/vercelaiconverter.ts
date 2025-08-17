@@ -7,6 +7,7 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
 
     let messages: LLMMessage[] = [];
     
+    // generateText response is a string
     if (response?.request?.messages) {
         messages.push(...convert_response_messages_to_llm_messages(response.request.messages))
     }
@@ -22,11 +23,11 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
     }
 
     // generate text has text. stream text does not. 
-    if (response.Text && typeof response.Text === 'string') {
+    if (response.text && typeof response.text === 'string') {
         messages = [
             {
-                role: 'user',
-                content: response
+                role: 'assistant',
+                content: response.text
             }
         ]
     }
@@ -44,6 +45,8 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
         content: String(request.prompt)
       })
     }
+
+    // TODO: add tools support
 
     return {
         messages: messages,
@@ -75,24 +78,9 @@ function convert_response_messages_to_llm_messages(messages: any[]): LLMMessage[
       }
       extracted_messages.push({
         role: message.role,
-        // TODO: TEST - on the following line only add the text part if it exists
         content: content.join(' '),
       });
     }
   }
   return extracted_messages;
 }
-/*
-const LLMMessageSchema = z.object({
-  role: z.string(),
-  content: z.string().optional(),
-  tool_calls: z.array(LLMToolCallSchema).optional(),
-});
-
-*/
-
-  // Converting useChat
-
-  // Converting UiMessages (GenerateObject)
-
-  // converting Tools
