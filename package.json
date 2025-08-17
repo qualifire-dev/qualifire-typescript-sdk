@@ -1,6 +1,6 @@
 {
   "name": "qualifire",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "Qualifire client SDK",
   "main": "./lib/index.js",
   "files": [
@@ -114,9 +114,11 @@
     ]
   },
   "dependencies": {
+    "@ai-sdk/provider": "^2.0.0",
     "@traceloop/node-server-sdk": "^0.13.3",
-    "openai": "^4.28.4",
+    "ai": "^5.0.15",
+    "openai": "^5.12.2",
     "zod": "^3.22.4"
   },
-  "packageManager": "pnpm@9.6.0+sha512.38dc6fba8dba35b39340b9700112c2fe1e12f10b17134715a4aa98ccf7bb035e76fd981cf0bb384dfa98f8d6af5481c2bef2f4266a24bfa20c34eb7147ce0b5e"
+  "packageManager": "pnpm@10.14.0"
 }

@@ -54,9 +54,30 @@ const LLMMessageSchema = z.object({
   tool_calls: z.array(LLMToolCallSchema).optional(),
 });
 
+
+export type LLMMessage = z.infer<typeof LLMMessageSchema>;
+
 const SyntaxCheckArgsSchema = z.object({
   args: z.string(),
 });
+
+export const EvaluationRequestModernSchema = z
+  .object({
+    framework: z.string(),
+    request: z.any().optional(),
+    response: z.any().optional(),
+    dangerous_content_check: z.boolean().default(false).optional(),
+    grounding_check: z.boolean().default(false).optional(),
+    hallucinations_check: z.boolean().default(false).optional(),
+    harassment_check: z.boolean().default(false).optional(),
+    hate_speech_check: z.boolean().default(false).optional(),
+    instructions_following_check: z.boolean().default(false).optional(),
+    pii_check: z.boolean().default(false).optional(),
+    prompt_injections: z.boolean().default(false).optional(),
+    sexual_content_check: z.boolean().default(false).optional(),
+    syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+    tool_selection_quality_check: z.boolean().default(false).optional(),
+  });
 
 export const EvaluationRequestSchema = z
   .object({
@@ -138,5 +159,96 @@ const EvaluationResponseSchema = z.object({
   status: z.string(),
 });
 
+/**
+ * Zod schema for validating OpenAI response creation parameters.
+ * This schema is based on the comprehensive ResponseCreateParamsBase interface from OpenAI v5.x
+ * and ensures that the request parameters match the expected OpenAI API format.
+ */
+export const OpenAIResponseRequestSchema = z.object({
+  input: z.union([z.string(), z.any()]).optional(), // string | ResponseInput
+});
+
+/**
+ * Zod schema for validating OpenAI response structure.
+ * This schema is based on the comprehensive OpenAI Response interface and ensures
+ * that the request object matches the expected OpenAI API response format with all
+ * required fields and proper types. Used by the OpenAICanonicalEvaluationStrategy
+ * to validate incoming requests before conversion to EvaluationRequest.
+ */
+export const OpenAIResponseSchema = z.object({
+  // Required fields
+  id: z.string(),
+  created_at: z.number(),
+  output_text: z.string(),
+  model: z.string(),
+  object: z.literal('response'),
+  output: z.array(z.any()),
+  parallel_tool_calls: z.boolean(),
+  temperature: z.number().nullable(),
+  tool_choice: z.any(),
+  tools: z.array(z.any()),
+  top_p: z.number().nullable(),
+
+  // Optional fields
+  background: z.boolean().nullable().optional(),
+  max_output_tokens: z.number().nullable().optional(),
+  previous_response_id: z.string().nullable().optional(),
+  prompt: z.any().nullable().optional(),
+  prompt_cache_key: z.string().optional(),
+  reasoning: z.any().nullable().optional(),
+  safety_identifier: z.string().optional(),
+  service_tier: z
+    .enum(['auto', 'default', 'flex', 'scale', 'priority'])
+    .nullable()
+    .optional(),
+  status: z
+    .enum([
+      'completed',
+      'failed',
+      'in_progress',
+      'cancelled',
+      'queued',
+      'incomplete',
+    ])
+    .optional(),
+  text: z.any().optional(),
+  truncation: z.enum(['auto', 'disabled']).nullable().optional(),
+  usage: z.any().optional(),
+  user: z.string().optional(),
+
+  // Nullable fields
+  error: z.any().nullable(),
+  incomplete_details: z.any().nullable(),
+  instructions: z.union([z.string(), z.array(z.any())]).nullable(),
+  metadata: z.any().nullable(),
+
+  // Custom fields for Qualifire integration
+  input: z.string().optional(),
+  messages: z.array(z.any()).optional(),
+  available_tools: z
+    .array(
+      z.object({
+        name: z.string(),
+        description: z.string(),
+        parameters: z.record(z.string(), z.any()),
+      })
+    )
+    .optional(),
+  dangerous_content_check: z.boolean().optional(),
+  grounding_check: z.boolean().optional(),
+  hallucinations_check: z.boolean().optional(),
+  _request_id: z.string().nullable().optional(),
+
+  // Legacy fields (kept for backward compatibility)
+  store: z.boolean().optional(),
+  top_logprobs: z.number().optional(),
+  max_tool_calls: z.any().nullable().optional(),
+});
+
+export type OpenAIResponse = z.infer<typeof OpenAIResponseSchema>;
+export type OpenAIResponseRequest = z.infer<typeof OpenAIResponseRequestSchema>;
+
 export type EvaluationRequest = z.input<typeof EvaluationRequestSchema>;
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
+
+export type EvaluationModernRequest = z.infer<typeof EvaluationRequestModernSchema>;

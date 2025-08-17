@@ -1,7 +1,12 @@
-import { EvaluationRequestSchema, type EvaluationRequest, type EvaluationResponse } from './types';
 import * as traceloop from '@traceloop/node-server-sdk';
+import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelaiconverter';
+import { type EvaluationModernRequest, type EvaluationResponse } from './types';
 
-export { EvaluationRequest, EvaluationResponse } from './types';
+export type {
+  EvaluationModernRequest,
+  EvaluationRequest,
+  EvaluationResponse
+} from './types';
 
 
 /**
@@ -71,13 +76,31 @@ export class Qualifire {
    * });
    * ```
    */
-  evaluate = async (
-    request: EvaluationRequest
-  ): Promise<EvaluationResponse | undefined> => {
-    const parsedRequest = EvaluationRequestSchema.parse(request)
+  evaluate = async (evaluationModernRequest: EvaluationModernRequest): Promise<EvaluationResponse | undefined> => {
+    let requestConverter;
+    switch (evaluationModernRequest.framework) {
+      // TODO: add openai
+      case 'vercelai':
+        requestConverter = new VercelAICanonicalEvaluationStrategy();
+        break;    
+      default:
+        throw new Error(`Unsupported provider: ${evaluationModernRequest.framework}`);
+    }
+
+    const evaluationRequest = requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
-    const body = JSON.stringify(parsedRequest);
+    const body = {messages: evaluationRequest.messages,
+      hallucinations_check: evaluationModernRequest.hallucinations_check,
+      harassment_check: evaluationModernRequest.harassment_check,
+      hate_speech_check: evaluationModernRequest.hate_speech_check,
+      instructions_following_check: evaluationModernRequest.instructions_following_check,
+      pii_check: evaluationModernRequest.pii_check,
+      prompt_injections: evaluationModernRequest.prompt_injections,
+      sexual_content_check: evaluationModernRequest.sexual_content_check,
+      syntax_checks: evaluationModernRequest.syntax_checks,
+      tool_selection_quality_check: evaluationModernRequest.tool_selection_quality_check,
+    };
 
     const headers = {
       'Content-Type': 'application/json',
@@ -87,7 +110,7 @@ export class Qualifire {
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
