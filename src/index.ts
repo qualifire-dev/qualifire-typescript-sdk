@@ -1,4 +1,5 @@
 import * as traceloop from '@traceloop/node-server-sdk';
+import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openaiconverter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelaiconverter';
 import { type EvaluationModernRequest, type EvaluationResponse } from './types';
 
@@ -79,10 +80,12 @@ export class Qualifire {
   evaluate = async (evaluationModernRequest: EvaluationModernRequest): Promise<EvaluationResponse | undefined> => {
     let requestConverter;
     switch (evaluationModernRequest.framework) {
-      // TODO: add openai
+      case 'openai':
+        requestConverter = new OpenAICanonicalEvaluationStrategy();
+        break;
       case 'vercelai':
         requestConverter = new VercelAICanonicalEvaluationStrategy();
-        break;    
+        break;
       default:
         throw new Error(`Unsupported provider: ${evaluationModernRequest.framework}`);
     }

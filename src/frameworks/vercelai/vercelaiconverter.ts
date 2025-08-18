@@ -1,7 +1,6 @@
 import { EvaluationRequest, LLMMessage } from "../../types";
 import { CanonicalEvaluationStrategy } from "../canonical";
 
-// TODO: implement this properly
 export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationStrategy {
     convertToQualifireEvaluationRequest(request: any, response: any): EvaluationRequest {
 
