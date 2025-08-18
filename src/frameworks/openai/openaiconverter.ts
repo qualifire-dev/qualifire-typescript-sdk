@@ -30,10 +30,10 @@ export class OpenAICanonicalEvaluationStrategy
     if (response?.choices) {
       for (const choice of response.choices) {
         if (choice.message?.role && choice.message?.content) {
-        messages.push({
-          role: choice.message.role,
-          content: choice.message.content,
-        });
+          messages.push({
+            role: choice.message.role,
+            content: choice.message.content,
+          });
         } else {
           throw new Error("Invalid response: " + JSON.stringify(choice));
         }

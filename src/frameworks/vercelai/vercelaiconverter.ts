@@ -6,6 +6,38 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
 
     let messages: LLMMessage[] = [];
     
+    if (request.systemPrompt) {
+      messages.push({
+        role: 'system',
+        content: String(request.systemPrompt)
+      })
+    }
+
+    if (request.prompt) {
+      messages.push({
+        role: 'user',
+        content: String(request.prompt)
+      })
+    }
+
+    if (Array.isArray(response)) {
+      if (response.length > 0 && typeof response === 'string') {
+        const responseAsStrings: string[] = response
+        const mergedContent = responseAsStrings
+        .filter(item => typeof item === 'string')
+        .join('');
+      
+        if (mergedContent) {
+          messages.push({
+            role: 'assistant',
+            content: mergedContent
+          });
+        }
+      }
+      return {
+        messages: messages,
+      }
+    }
     // generateText response is a string
     if (response?.request?.messages) {
         messages.push(...convert_response_messages_to_llm_messages(response.request.messages))
@@ -21,31 +53,10 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
         messages.push(...convert_response_messages_to_llm_messages(response.messages));
     }
 
-    // generate text has text. stream text does not. 
-    if (response.text && typeof response.text === 'string') {
-        messages = [
-            {
-                role: 'assistant',
-                content: response.text
-            }
-        ]
-    }
-
-    if (request.systemPrompt) {
-      messages.push({
-        role: 'system',
-        content: String(request.systemPrompt)
-      })
-    }
-
-    if (request.prompt) {
-      messages.push({
-        role: 'user',
-        content: String(request.prompt)
-      })
-    }
-
     // TODO: add tools support
+    if (messages.length === 0) {
+      throw new Error("No messages found in the response");
+    }
 
     return {
         messages: messages,
