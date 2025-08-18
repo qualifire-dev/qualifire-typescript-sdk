@@ -94,15 +94,18 @@ export class Qualifire {
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {messages: evaluationRequest.messages,
-      hallucinations_check: evaluationModernRequest.hallucinations_check,
-      harassment_check: evaluationModernRequest.harassment_check,
-      hate_speech_check: evaluationModernRequest.hate_speech_check,
-      instructions_following_check: evaluationModernRequest.instructions_following_check,
-      pii_check: evaluationModernRequest.pii_check,
-      prompt_injections: evaluationModernRequest.prompt_injections,
-      sexual_content_check: evaluationModernRequest.sexual_content_check,
-      syntax_checks: evaluationModernRequest.syntax_checks,
-      tool_selection_quality_check: evaluationModernRequest.tool_selection_quality_check,
+      dangerous_content_check: evaluationModernRequest.dangerousContentCheck,
+      grounding_check: evaluationModernRequest.groundingCheck,
+      hallucinations_check: evaluationModernRequest.hallucinationsCheck,
+      harassment_check: evaluationModernRequest.harassmentCheck,
+      hate_speech_check: evaluationModernRequest.hateSpeechCheck,
+      instructions_following_check: evaluationModernRequest.instructionsFollowingCheck,
+      pii_check: evaluationModernRequest.piiCheck,
+      prompt_injections: evaluationModernRequest.promptInjections,
+      sexual_content_check: evaluationModernRequest.sexualContentCheck,
+      syntax_checks: evaluationModernRequest.syntaxChecks,
+      tool_selection_quality_check: evaluationModernRequest.toolSelectionQualityCheck,
+      assertions: evaluationModernRequest.assertions,
     };
 
     const headers = {

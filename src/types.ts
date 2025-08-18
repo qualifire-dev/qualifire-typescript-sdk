@@ -54,30 +54,29 @@ const LLMMessageSchema = z.object({
   tool_calls: z.array(LLMToolCallSchema).optional(),
 });
 
-
 export type LLMMessage = z.infer<typeof LLMMessageSchema>;
 
 const SyntaxCheckArgsSchema = z.object({
   args: z.string(),
 });
 
-export const EvaluationRequestModernSchema = z
-  .object({
-    framework: z.string(),
-    request: z.any().optional(),
-    response: z.any().optional(),
-    dangerous_content_check: z.boolean().default(false).optional(),
-    grounding_check: z.boolean().default(false).optional(),
-    hallucinations_check: z.boolean().default(false).optional(),
-    harassment_check: z.boolean().default(false).optional(),
-    hate_speech_check: z.boolean().default(false).optional(),
-    instructions_following_check: z.boolean().default(false).optional(),
-    pii_check: z.boolean().default(false).optional(),
-    prompt_injections: z.boolean().default(false).optional(),
-    sexual_content_check: z.boolean().default(false).optional(),
-    syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
-    tool_selection_quality_check: z.boolean().default(false).optional(),
-  });
+export const EvaluationRequestModernSchema = z.object({
+  framework: z.string(),
+  request: z.any().optional(),
+  response: z.any().optional(),
+  dangerousContentCheck: z.boolean().default(false).optional(),
+  groundingCheck: z.boolean().default(false).optional(),
+  hallucinationsCheck: z.boolean().default(false).optional(),
+  harassmentCheck: z.boolean().default(false).optional(),
+  hateSpeechCheck: z.boolean().default(false).optional(),
+  instructionsFollowingCheck: z.boolean().default(false).optional(),
+  piiCheck: z.boolean().default(false).optional(),
+  promptInjections: z.boolean().default(false).optional(),
+  sexualContentCheck: z.boolean().default(false).optional(),
+  syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+  toolSelectionQualityCheck: z.boolean().default(false).optional(),
+  assertions: z.array(z.string()).optional(),
+});
 
 export const EvaluationRequestSchema = z
   .object({
@@ -162,4 +161,6 @@ const EvaluationResponseSchema = z.object({
 export type EvaluationRequest = z.input<typeof EvaluationRequestSchema>;
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
 
-export type EvaluationModernRequest = z.infer<typeof EvaluationRequestModernSchema>;
+export type EvaluationModernRequest = z.infer<
+  typeof EvaluationRequestModernSchema
+>;
