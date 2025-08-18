@@ -1,4 +1,5 @@
 import * as traceloop from '@traceloop/node-server-sdk';
+import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/geminiconverter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openaiconverter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelaiconverter';
 import { type EvaluationModernRequest, type EvaluationResponse } from './types';
@@ -85,6 +86,9 @@ export class Qualifire {
         break;
       case 'vercelai':
         requestConverter = new VercelAICanonicalEvaluationStrategy();
+        break;
+      case 'gemini':
+        requestConverter = new GeminiAICanonicalEvaluationStrategy();
         break;
       default:
         throw new Error(`Unsupported provider: ${evaluationModernRequest.framework}`);
