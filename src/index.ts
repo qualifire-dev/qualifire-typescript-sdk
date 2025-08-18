@@ -1,4 +1,5 @@
 import * as traceloop from '@traceloop/node-server-sdk';
+import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claudeconverter';
 import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/geminiconverter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openaiconverter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelaiconverter';
@@ -79,20 +80,21 @@ export class Qualifire {
    * ```
    */
   evaluate = async (evaluationModernRequest: EvaluationModernRequest): Promise<EvaluationResponse | undefined> => {
-    let requestConverter;
-    switch (evaluationModernRequest.framework) {
-      case 'openai':
-        requestConverter = new OpenAICanonicalEvaluationStrategy();
-        break;
-      case 'vercelai':
-        requestConverter = new VercelAICanonicalEvaluationStrategy();
-        break;
-      case 'gemini':
-        requestConverter = new GeminiAICanonicalEvaluationStrategy();
-        break;
-      default:
-        throw new Error(`Unsupported provider: ${evaluationModernRequest.framework}`);
+    const frameworkConverters = {
+      'openai': () => new OpenAICanonicalEvaluationStrategy(),
+      'vercelai': () => new VercelAICanonicalEvaluationStrategy(),
+      'gemini': () => new GeminiAICanonicalEvaluationStrategy(),
+      'claude': () => new ClaudeCanonicalEvaluationStrategy(),
+    };
+
+    const supportedFrameworks = Object.keys(frameworkConverters);
+    const converterFactory = frameworkConverters[evaluationModernRequest.framework as keyof typeof frameworkConverters];
+    
+    if (!converterFactory) {
+      throw new Error(`Unsupported provider: ${evaluationModernRequest.framework}. Supported frameworks: ${supportedFrameworks.join(', ')}`);
     }
+
+    const requestConverter = converterFactory();
 
     const evaluationRequest = requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
 
