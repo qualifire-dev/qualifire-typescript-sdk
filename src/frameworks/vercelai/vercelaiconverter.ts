@@ -34,6 +34,7 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
           });
         }
       }
+
       return {
         messages: messages,
       }

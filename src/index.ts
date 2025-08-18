@@ -24,7 +24,8 @@ export class Qualifire {
 
   /**
    * Creates an instance of the Qualifire class.
-   * @param apiKey - The API key for the Qualifire SDK.   * @param baseUrl - The base URL for the Qualifire API.
+   * @param apiKey - The API key for the Qualifire SDK.
+   * @param baseUrl - The base URL for the Qualifire API.
    */
   constructor({ apiKey, baseUrl }: { apiKey?: string; baseUrl?: string }) {
     const key = apiKey || process.env.QUALIFIRE_API_KEY;
@@ -41,7 +42,7 @@ export class Qualifire {
     this.baseUrl = qualifireBaseUrl;
   }
 
-  init() {
+  init(): void {
     process.env.TRACELOOP_TELEMETRY = 'false';
 
     traceloop.initialize({
@@ -97,6 +98,27 @@ export class Qualifire {
     const requestConverter = converterFactory();
 
     const evaluationRequest = requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
+
+    let accumulatedInput: string[] = [];
+    let accumulatedOutput: string[] = [];
+    if (evaluationRequest.messages) {
+      for (const message of evaluationRequest.messages) {
+        if (!message.content) {
+          break;
+        }
+
+        switch (message.role) {
+          case 'user':
+            accumulatedInput.push(message.content);
+            break;
+          case 'assistant':
+            accumulatedOutput.push(message.content);
+            break;
+        }
+      }
+    }
+    evaluationRequest.input = accumulatedInput.join('\n');
+    evaluationRequest.output = accumulatedOutput.join('\n');
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {messages: evaluationRequest.messages,
