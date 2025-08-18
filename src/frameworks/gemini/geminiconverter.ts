@@ -1,6 +1,6 @@
 import {
-    EvaluationRequest,
-    LLMMessage
+  EvaluationRequest,
+  LLMMessage
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
 
@@ -12,11 +12,21 @@ export class GeminiAICanonicalEvaluationStrategy
   ): EvaluationRequest {
     let messages: LLMMessage[] = [];
     
-    if (request?.message) {
+    if (typeof request === 'string') {
+        messages.push({
+            role: 'user',
+            content: request,
+        });
+    } else if (request?.message) {
         messages.push({
             role: 'user',
             content: request.message,
         });
+    }
+
+    // VertexAI response contains a response inside the response object.
+    if (response?.response?.candidates) {
+      response = response.response;
     }
 
     // Handle Gemini response messages
@@ -33,8 +43,6 @@ export class GeminiAICanonicalEvaluationStrategy
                 throw new Error("Invalid Gemini request: " + JSON.stringify(part));
             }
           }
-        } else {
-            throw new Error("Invalid Gemini request: " + JSON.stringify(candidate));
         }
       }
     }
