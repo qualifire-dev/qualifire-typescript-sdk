@@ -47,30 +47,50 @@ export class ClaudeCanonicalEvaluationStrategy
       }
     }
 
-    // Handle Claude response content array
-    if (response?.content && Array.isArray(response.content)) {
-      for (const contentBlock of response.content) {
-        if (contentBlock.type === 'text' && contentBlock.text) {
-          messages.push({
-            role: 'assistant',
-            content: contentBlock.text,
-          });
-        } else if (contentBlock.type === 'tool_use') {
-          // Handle tool use blocks
-          messages.push({
-            role: 'assistant',
-            content: `Tool used: ${contentBlock.name || 'unknown'}`,
-          });
-        }
-      }
+    let chunks;
+    if (Array.isArray(response)) {
+      chunks = response;
+    } else {
+      chunks = [response];
     }
 
-    // Handle direct text response (fallback)
-    if (typeof response === 'string') {
+    // Process streaming chunks and accumulate content
+    const accumulatedContent = this.processStreamingChunks(chunks);
+    if (accumulatedContent) {
       messages.push({
         role: 'assistant',
-        content: response,
+        content: accumulatedContent,
       });
+    } else {
+      // Handle non-streaming responses
+      for (const chunk of chunks) {
+        if (!this.isClaudeStreamingChunk(chunk)) {
+          // Handle Claude non-streaming response (complete message)
+          if (chunk?.content && Array.isArray(chunk.content)) {
+            for (const contentBlock of chunk.content) {
+              if (contentBlock.type === 'text' && contentBlock.text) {
+                messages.push({
+                  role: 'assistant',
+                  content: contentBlock.text,
+                });
+              } else if (contentBlock.type === 'tool_use') {
+                // Handle tool use blocks
+                messages.push({
+                  role: 'assistant',
+                  content: `Tool used: ${contentBlock.name || 'unknown'}`,
+                });
+              }
+            }
+          }
+          // Handle direct text response (fallback)
+          else if (typeof chunk === 'string') {
+            messages.push({
+              role: 'assistant',
+              content: chunk,
+            });
+          }
+        }
+      }
     }
 
     if (messages.length > 0) {
@@ -79,5 +99,60 @@ export class ClaudeCanonicalEvaluationStrategy
       };
     }
     throw new Error("Invalid Claude request or response - no valid messages found");
+  }
+
+  private processStreamingChunks(chunks: any[]): string | null {
+    const contentBlocks: { [key: number]: string[] } = {};
+    for (const chunk of chunks) {
+      if (!this.isClaudeStreamingChunk(chunk)) {
+        continue;
+      }
+      
+      switch (chunk.type) {
+        case 'content_block_start':
+          // Initialize content block accumulator
+          const startIndex = chunk.index || 0;
+          if (!contentBlocks[startIndex]) {
+            contentBlocks[startIndex] = [];
+          }
+          break;
+        
+        case 'content_block_delta':
+          // Accumulate text content from delta
+          if (chunk.delta?.type === 'text_delta' && chunk.delta?.text) {
+            const deltaIndex = chunk.index || 0;
+            if (!contentBlocks[deltaIndex]) {
+              contentBlocks[deltaIndex] = [];
+            }
+            contentBlocks[deltaIndex].push(chunk.delta.text);
+          }
+          break;
+        
+        case 'content_block_stop':
+          // Content block is complete, but we don't need to do anything special here
+          // The content is already accumulated in contentBlocks
+          break;
+      }
+    }
+    
+    // Combine all content blocks into a single message
+    const allContent = Object.keys(contentBlocks)
+      .sort((a, b) => parseInt(a) - parseInt(b)) // Sort by block index
+      .map(index => contentBlocks[parseInt(index)].join(''))
+      .filter(content => content.length > 0)
+      .join('');
+
+    return allContent || null;
+  }
+
+  private isClaudeStreamingChunk(response: any): boolean {
+    return response?.type && [
+      'message_start',
+      'content_block_start', 
+      'content_block_delta',
+      'content_block_stop',
+      'message_delta',
+      'message_stop'
+    ].includes(response.type);
   }
 }
