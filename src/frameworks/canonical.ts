@@ -4,7 +4,7 @@ export interface CanonicalEvaluationStrategy {
   convertToQualifireEvaluationRequest(
     request: any,
     response: any
-  ): EvaluationRequest;
+  ): Promise<EvaluationRequest>;
 }
 export function convertToolsToLLMDefinitions(tools: unknown[]): LLMToolDefinition[] {
   const results: LLMToolDefinition[] = [];

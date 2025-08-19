@@ -2,7 +2,7 @@ import { EvaluationRequest, LLMMessage, LLMToolDefinition } from "../../types";
 import { CanonicalEvaluationStrategy } from "../canonical";
 
 export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationStrategy {
-    convertToQualifireEvaluationRequest(request: any, response: any): EvaluationRequest {
+    convertToQualifireEvaluationRequest(request: any, response: any): Promise<EvaluationRequest> {
 
     let messages: LLMMessage[] = [];
     
@@ -25,48 +25,46 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
       available_tools = convertToolsToLLMDefinitions(request.tools);
     }
 
-    if (Array.isArray(response)) {
-      if (response.length > 0 && typeof response[0] === 'string') {
-        const responseAsStrings: string[] = response
-        const mergedContent = responseAsStrings
-        .filter(item => typeof item === 'string')
-        .join('');
+    // streamText response has a textStream property
+    if (response.textStream) {
+      let mergedContent = [];
+      for await (const textPart of response.textStream) {
+        mergedContent.push(textPart);
+      }
       
-        if (mergedContent) {
-          messages.push({
-            role: 'assistant',
-            content: mergedContent
-          });
-        }
-      }
-    } else {
-      // generateText response is a string
-      if (response?.request?.messages) {
-          messages.push(...convertResponseMessagesToLLMMessages(response.request.messages))
-      }
-
-      // generateText response is a string
-      if (response?.response?.messages) {
-          messages.push(...convertResponseMessagesToLLMMessages(response.response.messages));
-      }
-
-      // generateText callTools
-      let tool_calls = [];
-      if (response?.toolCalls) {
-        tool_calls = response.toolCalls;
-      } else if (response?.response?.toolCalls) {
-        tool_calls = response.response.toolCalls
-      }
-      for (const toolCall of tool_calls) {
-        messages.push({
+      messages.push({
           role: 'assistant',
-          tool_calls: [{
-            name: toolCall.toolName,
-            arguments: toolCall.input,
-            id: toolCall.toolCallId
-          }]
+          content: mergedContent.join('')
         });
-      }
+    }
+
+    // streamText response has a toolCalls property
+    // generateText response is a string
+    if (response?.request?.messages) {
+        messages.push(...convertResponseMessagesToLLMMessages(response.request.messages))
+    }
+
+    // generateText response is a string
+    if (response?.response?.messages) {
+        messages.push(...convertResponseMessagesToLLMMessages(response.response.messages));
+    }
+
+    // generateText callTools
+    let tool_calls = [];
+    if (response?.toolCalls) {
+      tool_calls = response.toolCalls;
+    } else if (response?.response?.toolCalls) {
+      tool_calls = response.response.toolCalls
+    }
+    for (const toolCall of tool_calls) {
+      messages.push({
+        role: 'assistant',
+        tool_calls: [{
+          name: toolCall.toolName,
+          arguments: toolCall.input,
+          id: toolCall.toolCallId
+        }]
+      });
     }
 
     // useChat messages is a string
