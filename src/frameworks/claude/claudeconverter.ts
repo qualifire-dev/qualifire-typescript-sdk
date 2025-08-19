@@ -6,10 +6,10 @@ import { CanonicalEvaluationStrategy } from '../canonical';
 
 export class ClaudeCanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
-  convertToQualifireEvaluationRequest(
+  async convertToQualifireEvaluationRequest(
     request: any,
     response: any
-  ): EvaluationRequest {
+  ): Promise<EvaluationRequest> {
     let messages: LLMMessage[] = [];
     
     // Handle Claude system message first (if present)

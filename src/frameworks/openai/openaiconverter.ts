@@ -7,10 +7,10 @@ import { CanonicalEvaluationStrategy, convertToolsToLLMDefinitions } from '../ca
 
 export class OpenAICanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
-  convertToQualifireEvaluationRequest(
+  async convertToQualifireEvaluationRequest(
     request: any,
     response: any
-  ): EvaluationRequest {
+  ): Promise<EvaluationRequest> {
     // chat completions api
     let messages: LLMMessage[] = [];
     

@@ -97,7 +97,7 @@ export class Qualifire {
 
     const requestConverter = converterFactory();
 
-    const evaluationRequest = requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
+    const evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {messages: evaluationRequest.messages,

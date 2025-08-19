@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import { VercelAICanonicalEvaluationStrategy } from '../src/frameworks/vercelai/vercelaiconverter';
 
 describe('VercelAICanonicalEvaluationStrategy', () => {
@@ -10,7 +11,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
   });
 
   describe('streaming response (array of strings)', () => {
-    it('should convert Vercel AI streaming response to accumulated content', () => {
+    it('should convert Vercel AI streaming response to accumulated content', async () => {
       const request = {
         systemPrompt: 'You are a helpful assistant.',
         prompt: 'Are the sky blue?',
@@ -24,7 +25,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       );
       const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -55,7 +56,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
   });
 
   describe('generateText response with text property', () => {
-    it('should handle generateText response with text property', () => {
+    it('should handle generateText response with text property', async () => {
       const request = {
         model: 'gpt-4',
         prompt: 'What is AI?',
@@ -65,7 +66,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         text: 'AI stands for Artificial Intelligence.',
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -85,7 +86,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
   });
 
   describe('useChat messages', () => {
-    it('should handle useChat messages with string content', () => {
+    it('should handle useChat messages with string content', async () => {
       const request = {
         systemPrompt: 'You are helpful.',
       };
@@ -98,7 +99,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -118,7 +119,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       expect(assistantMessage?.content).toBe('Hi there!');
     });
 
-    it('should handle useChat messages with parts content', () => {
+    it('should handle useChat messages with parts content', async () => {
       const request = {
         prompt: 'Question',
       };
@@ -142,7 +143,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -338,16 +339,16 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
   });
 
   describe('error handling', () => {
-    it('should throw error when no messages found', () => {
+    it('should throw error when no messages found', async () => {
       const request = {};
       const response = {};
 
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request, response);
-      }).toThrow('No messages found in the response');
+      await expect(async () => {
+        await converter.convertToQualifireEvaluationRequest(request, response);
+      }).rejects.toThrow('No messages found in the response');
     });
 
-    it('should handle missing parts gracefully', () => {
+    it('should handle missing parts gracefully', async () => {
       const request = { prompt: 'Test' };
       const response = {
         messages: [
@@ -355,7 +356,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -369,11 +370,11 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
   });
 
   describe('edge cases', () => {
-    it('should handle request with no recognizable prompt fields', () => {
+    it('should handle request with no recognizable prompt fields', async () => {
       const request = { model: 'gpt-4' };
       const response = { text: 'Response' };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -549,7 +550,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       expect(result.available_tools?.find(t => t.name === 'tool2')).toBeDefined();
     });
 
-    it('should handle tools in request without tool calls in response', () => {
+    it('should handle tools in request without tool calls in response', async () => {
       const request = {
         prompt: "Question without tool use",
         tools: {
@@ -563,7 +564,7 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         text: "Regular response without tool calls"
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -579,6 +580,297 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       // Should still have available tools
       expect(result.available_tools?.length).toBe(1);
       expect(result.available_tools?.[0]?.name).toBe('unused_tool');
+    });
+
+    it('should correctly extract parameters from Zod schema inputSchema', async () => {
+      const request = {
+        prompt: "Use tool with Zod schema",
+        tools: {
+          zod_tool: {
+            description: "Tool with Zod schema",
+            inputSchema: z.object({
+              name: z.string().describe("User's name"),
+              age: z.number().min(0).describe("User's age"),
+              email: z.string().email().optional().describe("User's email")
+            })
+          }
+        }
+      };
+
+      const response = {
+        text: "Tool parameters extracted"
+      };
+
+      const result = await converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have available tools with parameters
+      expect(result.available_tools?.length).toBe(1);
+      const tool = result.available_tools?.[0];
+      expect(tool?.name).toBe('zod_tool');
+      expect(tool?.description).toBe('Tool with Zod schema');
+      
+      // Should have parameters extracted from Zod schema
+      expect(tool?.parameters).toBeDefined();
+      expect(tool?.parameters?.name).toBeDefined();
+      expect(tool?.parameters?.age).toBeDefined();
+      expect(tool?.parameters?.email).toBeDefined();
+      
+      // Check parameter details
+      expect(tool?.parameters?.name?.type).toBe('string');
+      expect(tool?.parameters?.name?.description).toBe("User's name");
+      expect(tool?.parameters?.age?.type).toBe('number');
+      expect(tool?.parameters?.age?.description).toBe("User's age");
+      expect(tool?.parameters?.email?.type).toBe('string');
+      expect(tool?.parameters?.email?.description).toBe("User's email");
+    });
+
+    it('should correctly extract parameters from JSONSchema inputSchema', async () => {
+      const request = {
+        prompt: "Use tool with JSONSchema",
+        tools: {
+          json_tool: {
+            description: "Tool with JSONSchema",
+            inputSchema: {
+              jsonSchema: {
+                type: "object",
+                properties: {
+                  query: {
+                    type: "string",
+                    description: "Search query",
+                  minLength: 1
+                  },
+                  limit: {
+                    type: "integer",
+                    description: "Maximum results",
+                    minimum: 1,
+                    maximum: 100
+                  },
+                  filters: {
+                    type: "array",
+                    description: "Search filters",
+                    items: {
+                      type: "string"
+                    }
+                  }
+                },
+                required: ["query"]
+              }
+            }
+          }
+        }
+      };
+
+      const response = {
+        text: "JSONSchema parameters extracted"
+      };
+
+      const result = await converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have available tools with parameters
+      expect(result.available_tools?.length).toBe(1);
+      const tool = result.available_tools?.[0];
+      expect(tool?.name).toBe('json_tool');
+      expect(tool?.description).toBe('Tool with JSONSchema');
+      
+      // Should have parameters extracted from JSONSchema
+      expect(tool?.parameters).toBeDefined();
+      expect(tool?.parameters?.query).toBeDefined();
+      expect(tool?.parameters?.limit).toBeDefined();
+      expect(tool?.parameters?.filters).toBeDefined();
+      
+      // Check parameter details
+      expect(tool?.parameters?.query?.type).toBe('string');
+      expect(tool?.parameters?.query?.description).toBe('Search query');
+      expect(tool?.parameters?.query?.minLength).toBe(1);
+      
+      expect(tool?.parameters?.limit?.type).toBe('integer');
+      expect(tool?.parameters?.limit?.description).toBe('Maximum results');
+      expect(tool?.parameters?.limit?.minimum).toBe(1);
+      expect(tool?.parameters?.limit?.maximum).toBe(100);
+      
+      expect(tool?.parameters?.filters?.type).toBe('array');
+      expect(tool?.parameters?.filters?.description).toBe('Search filters');
+      expect(tool?.parameters?.filters?.items?.type).toBe('string');
+    });
+
+    it('should handle tools with missing inputSchema', () => {
+      const request = {
+        prompt: "Use tool without schema",
+        tools: {
+          no_schema_tool: {
+            description: "Tool without input schema"
+          }
+        }
+      };
+
+      const response = {
+        text: "No schema tool used"
+      };
+
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have available tools
+      expect(result.available_tools?.length).toBe(1);
+      const tool = result.available_tools?.[0];
+      expect(tool?.name).toBe('no_schema_tool');
+      expect(tool?.description).toBe('Tool without input schema');
+      
+      // Should have empty parameters object
+      expect(tool?.parameters).toEqual({});
+    });
+
+    it('should handle tools with malformed inputSchema', () => {
+      const request = {
+        prompt: "Use tool with malformed schema",
+        tools: {
+          malformed_tool: {
+            description: "Tool with malformed schema",
+            inputSchema: {
+              // Missing jsonSchema property
+              properties: {
+                test: { type: "string" }
+              }
+            }
+          }
+        }
+      };
+
+      const response = {
+        text: "Malformed schema tool used"
+      };
+
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have available tools
+      expect(result.available_tools?.length).toBe(1);
+      const tool = result.available_tools?.[0];
+      expect(tool?.name).toBe('malformed_tool');
+      expect(tool?.description).toBe('Tool with malformed schema');
+      
+      // Should have empty parameters object due to malformed schema
+      expect(tool?.parameters).toEqual({});
+    });
+
+    it('should handle tools with complex nested Zod schemas', () => {
+      const request = {
+        prompt: "Use tool with complex Zod schema",
+        tools: {
+          complex_tool: {
+            description: "Tool with complex nested schema",
+            inputSchema: z.object({
+              user: z.object({
+                profile: z.object({
+                  firstName: z.string(),
+                  lastName: z.string(),
+                  preferences: z.object({
+                    theme: z.enum(['light', 'dark']),
+                    notifications: z.boolean()
+                  }).optional()
+                }),
+                settings: z.array(z.object({
+                  key: z.string(),
+                  value: z.union([z.string(), z.number(), z.boolean()])
+                }))
+              }),
+              metadata: z.record(z.string(), z.any()).optional()
+            })
+          }
+        }
+      };
+
+      const response = {
+        text: "Complex schema tool used"
+      };
+
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have available tools with complex parameters
+      expect(result.available_tools?.length).toBe(1);
+      const tool = result.available_tools?.[0];
+      expect(tool?.name).toBe('complex_tool');
+      expect(tool?.description).toBe('Tool with complex nested schema');
+      
+      // Should have complex parameters structure
+      expect(tool?.parameters).toBeDefined();
+      expect(tool?.parameters?.user).toBeDefined();
+      expect(tool?.parameters?.user?.profile).toBeDefined();
+      expect(tool?.parameters?.user?.profile?.firstName).toBeDefined();
+      expect(tool?.parameters?.user?.profile?.lastName).toBeDefined();
+      expect(tool?.parameters?.user?.profile?.preferences).toBeDefined();
+      expect(tool?.parameters?.user?.profile?.preferences?.theme).toBeDefined();
+      expect(tool?.parameters?.user?.profile?.preferences?.notifications).toBeDefined();
+      expect(tool?.parameters?.user?.settings).toBeDefined();
+      expect(tool?.parameters?.metadata).toBeDefined();
+      
+      // Check specific parameter types
+      expect(tool?.parameters?.user?.profile?.firstName?.type).toBe('string');
+      expect(tool?.parameters?.user?.profile?.preferences?.theme?.enum).toEqual(['light', 'dark']);
+      expect(tool?.parameters?.user?.profile?.preferences?.notifications?.type).toBe('boolean');
+      expect(tool?.parameters?.user?.settings?.type).toBe('array');
+      expect(tool?.parameters?.metadata?.type).toBe('object');
+    });
+
+    it('should handle tools with array and union type parameters', () => {
+      const request = {
+        prompt: "Use tool with array and union types",
+        tools: {
+          array_union_tool: {
+            description: "Tool with array and union type parameters",
+            inputSchema: z.object({
+              items: z.array(z.string()),
+              count: z.union([z.literal('all'), z.number()]),
+              options: z.array(z.union([
+                z.literal('option1'),
+                z.literal('option2'),
+                z.literal('option3')
+              ]))
+            })
+          }
+        }
+      };
+
+      const response = {
+        text: "Array and union types tool used"
+      };
+
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have available tools with array and union parameters
+      expect(result.available_tools?.length).toBe(1);
+      const tool = result.available_tools?.[0];
+      expect(tool?.name).toBe('array_union_tool');
+      expect(tool?.description).toBe('Tool with array and union type parameters');
+      
+      // Should have array and union parameters
+      expect(tool?.parameters?.items?.type).toBe('array');
+      expect(tool?.parameters?.items?.items?.type).toBe('string');
+      
+      expect(tool?.parameters?.count?.anyOf).toBeDefined();
+      expect(tool?.parameters?.count?.anyOf?.length).toBe(2);
+      expect(tool?.parameters?.count?.anyOf?.[0]?.const).toBe('all');
+      expect(tool?.parameters?.count?.anyOf?.[1]?.type).toBe('number');
+      
+      expect(tool?.parameters?.options?.type).toBe('array');
+      expect(tool?.parameters?.options?.items?.anyOf).toBeDefined();
+      expect(tool?.parameters?.options?.items?.anyOf?.length).toBe(3);
     });
   });
 });

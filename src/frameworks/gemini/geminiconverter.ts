@@ -6,10 +6,10 @@ import { CanonicalEvaluationStrategy } from '../canonical';
 
 export class GeminiAICanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
-  convertToQualifireEvaluationRequest(
+  async convertToQualifireEvaluationRequest(
     request: any,
     response: any
-  ): EvaluationRequest {
+  ): Promise<EvaluationRequest> {
     let messages: LLMMessage[] = [];
     
     if (typeof request === 'string') {
