@@ -125,9 +125,9 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       const assistantMessages = result.messages?.filter(
         m => m.role === 'assistant'
       );
-      expect(assistantMessages.length).toBe(2);
-      expect(assistantMessages[0].content).toBe('Hi there!');
-      expect(assistantMessages[1].content).toBe('Hello!');
+      expect(assistantMessages?.length).toBe(2);
+      expect(assistantMessages?.[0].content).toBe('Hi there!');
+      expect(assistantMessages?.[1].content).toBe('Hello!');
     });
 
     it('should handle output with multiple elements', () => {

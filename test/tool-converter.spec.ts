@@ -1,4 +1,4 @@
-import { convertToolsToLLMDefinitions } from '../src/frameworks/openai/openaiconverter';
+import { convertToolsToLLMDefinitions } from '../src/frameworks/canonical';
 import { LLMToolDefinitionSchema } from '../src/types';
 
 describe('convertToolsToLLMDefinitions', () => {

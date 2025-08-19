@@ -401,4 +401,184 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       expect(result.messages?.length).toBe(4); // user + text + messages + request.messages
     });
   });
+
+  describe('tools and tool calls', () => {
+    it('should handle request with tools and response with toolCalls', () => {
+      const request = {
+        prompt: "What is love?",
+        system: "You are an assistant which tells lies",
+        tools: {
+          tool1: {
+            description: "Tool 1",
+            inputSchema: {
+              type: "object",
+              properties: {
+                value: {
+                  type: "string",
+                  description: "The value to be used in the tool"
+                }
+              },
+              required: ["value"]
+            }
+          }
+        }
+      };
+
+      const response = {
+        toolCalls: [
+          {
+            "input": {
+              "value": "value",
+            },
+            "providerExecuted": undefined,
+            "providerMetadata": undefined,
+            "toolCallId": "call-1",
+            "toolName": "tool1",
+            "type": "tool-call",
+          },
+        ]
+      };
+
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have system and user messages plus assistant message with tool call
+      expect(result.messages?.length).toBe(3);
+
+      // Should have system message
+      const systemMessage = result.messages?.find(m => m.role === 'system');
+      expect(systemMessage).toBeDefined();
+      expect(systemMessage?.content).toBe('You are an assistant which tells lies');
+
+      // Should have user message
+      const userMessage = result.messages?.find(m => m.role === 'user');
+      expect(userMessage).toBeDefined();
+      expect(userMessage?.content).toBe('What is love?');
+
+      // Should have assistant message with tool calls
+      const assistantMessage = result.messages?.find(m => m.role === 'assistant');
+      expect(assistantMessage).toBeDefined();
+      expect(assistantMessage?.tool_calls).toBeDefined();
+      expect(assistantMessage?.tool_calls?.length).toBe(1);
+      expect(assistantMessage?.tool_calls?.[0]?.name).toBe('tool1');
+      expect(assistantMessage?.tool_calls?.[0]?.arguments).toEqual({ value: "value" });
+      expect(assistantMessage?.tool_calls?.[0]?.id).toBe('call-1');
+
+      // Should have available tools
+      expect(result.available_tools).toBeDefined();
+      expect(result.available_tools?.length).toBe(1);
+      expect(result.available_tools?.[0]?.name).toBe('tool1');
+      expect(result.available_tools?.[0]?.description).toBe('Tool 1');
+
+    });
+
+    it('should handle multiple tool calls', () => {
+      const request = {
+        prompt: "Use multiple tools",
+        tools: {
+          tool1: {
+            description: "First tool",
+            inputSchema: {
+              type: "object",
+              properties: {
+                param1: { type: "string" }
+              }
+            }
+          },
+          tool2: {
+            description: "Second tool",
+            inputSchema: {
+              type: "object",
+              properties: {
+                param2: { type: "number" }
+              }
+            }
+          }
+        }
+      };
+
+      const response = {
+        toolCalls: [
+          {
+            "input": { "param1": "test" },
+            "toolCallId": "call-1",
+            "toolName": "tool1",
+            "type": "tool-call"
+          },
+          {
+            "input": { "param2": 42 },
+            "toolCallId": "call-2",
+            "toolName": "tool2",
+            "type": "tool-call"
+          }
+        ]
+      };
+
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have user message plus 2 assistant messages with tool calls
+      expect(result.messages?.length).toBe(3);
+
+      // Should have 2 assistant messages with tool calls
+      const assistantMessages = result.messages?.filter(m => m.role === 'assistant');
+      expect(assistantMessages?.length).toBe(2);
+      
+      const toolCallMessages = assistantMessages?.filter(m => m.tool_calls);
+      expect(toolCallMessages?.length).toBe(2);
+
+      // Check first tool call
+      const firstToolCall = toolCallMessages?.[0]?.tool_calls?.[0];
+      expect(firstToolCall?.name).toBe('tool1');
+      expect(firstToolCall?.arguments).toEqual({ param1: "test" });
+      expect(firstToolCall?.id).toBe('call-1');
+
+      // Check second tool call
+      const secondToolCall = toolCallMessages?.[1]?.tool_calls?.[0];
+      expect(secondToolCall?.name).toBe('tool2');
+      expect(secondToolCall?.arguments).toEqual({ param2: 42 });
+      expect(secondToolCall?.id).toBe('call-2');
+
+      // Should have 2 available tools
+      expect(result.available_tools?.length).toBe(2);
+      expect(result.available_tools?.find(t => t.name === 'tool1')).toBeDefined();
+      expect(result.available_tools?.find(t => t.name === 'tool2')).toBeDefined();
+    });
+
+    it('should handle tools in request without tool calls in response', () => {
+      const request = {
+        prompt: "Question without tool use",
+        tools: {
+          unused_tool: {
+            description: "This tool won't be called"
+          }
+        }
+      };
+
+      const response = {
+        text: "Regular response without tool calls"
+      };
+
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have user and assistant messages
+      expect(result.messages?.length).toBe(2);
+
+      // No tool calls should be present
+      const assistantMessage = result.messages?.find(m => m.role === 'assistant');
+      expect(assistantMessage?.tool_calls).toBeUndefined();
+      expect(assistantMessage?.content).toBe("Regular response without tool calls");
+
+      // Should still have available tools
+      expect(result.available_tools?.length).toBe(1);
+      expect(result.available_tools?.[0]?.name).toBe('unused_tool');
+    });
+  });
 });

@@ -101,6 +101,7 @@ export class Qualifire {
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {messages: evaluationRequest.messages,
+      available_tools: evaluationRequest.available_tools,
       dangerous_content_check: evaluationModernRequest.dangerousContentCheck,
       grounding_check: evaluationModernRequest.groundingCheck,
       hallucinations_check: evaluationModernRequest.hallucinationsCheck,

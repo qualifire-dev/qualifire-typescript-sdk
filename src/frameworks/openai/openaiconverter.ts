@@ -3,7 +3,7 @@ import {
   LLMMessage,
   LLMToolDefinition
 } from '../../types';
-import { CanonicalEvaluationStrategy } from '../canonical';
+import { CanonicalEvaluationStrategy, convertToolsToLLMDefinitions } from '../canonical';
 
 export class OpenAICanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
@@ -101,58 +101,4 @@ export class OpenAICanonicalEvaluationStrategy
       available_tools: available_tools,
     };
   }
-}
-
-export function convertToolsToLLMDefinitions(tools: unknown[]): LLMToolDefinition[] {
-  const results: LLMToolDefinition[] = [];
-  
-  for (const tool of tools) {
-    // Check if it's a valid tool object
-    if (!tool || typeof tool !== 'object') {
-      continue;
-    }
-    
-    const toolObj = tool as any;
-    
-    // Handle FunctionTool type
-    if (toolObj.type === 'function' && toolObj.function) {
-      const functionDef = toolObj.function;
-      
-      const llmTool: LLMToolDefinition = {
-        name: functionDef.name || 'unnamed_function',
-        description: functionDef.description || 'No description provided',
-        parameters: functionDef.parameters || {}
-      };
-      
-      results.push(llmTool);
-    }
-    
-    // Handle other tool types that might have different structures
-    else if (toolObj.name && typeof toolObj.name === 'string') {
-      // Generic tool with name property
-      const llmTool: LLMToolDefinition = {
-        name: toolObj.name,
-        description: toolObj.description || 'No description provided',
-        parameters: toolObj.parameters || toolObj.args || {}
-      };
-      
-      results.push(llmTool);
-    }
-    
-    // Handle Vercel AI SDK tool format
-    else if (toolObj.description && toolObj.parameters) {
-      // Extract name from tool (might need to be provided or generated)
-      const name = toolObj.name || `tool_${results.length}`;
-      
-      const llmTool: LLMToolDefinition = {
-        name: name,
-        description: toolObj.description,
-        parameters: toolObj.parameters
-      };
-      
-      results.push(llmTool);
-    }
-  }
-  
-  return results;
 }
