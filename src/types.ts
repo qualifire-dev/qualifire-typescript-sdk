@@ -36,7 +36,7 @@ export const outputSchema = z.object({
 
 export type Output = z.infer<typeof outputSchema> | string;
 
-const LLMToolDefinitionSchema = z.object({
+export const LLMToolDefinitionSchema = z.object({
   name: z.string(),
   description: z.string(),
   parameters: z.record(z.string(), z.any()),
@@ -160,7 +160,8 @@ const EvaluationResponseSchema = z.object({
 
 export type EvaluationRequest = z.input<typeof EvaluationRequestSchema>;
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
-
+export type LLMToolDefinition = z.infer<typeof LLMToolDefinitionSchema>;
+export type LLMToolCall = z.infer<typeof LLMToolCallSchema>;
 export type EvaluationModernRequest = z.infer<
   typeof EvaluationRequestModernSchema
 >;

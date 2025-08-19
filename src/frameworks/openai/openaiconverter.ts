@@ -1,6 +1,7 @@
 import {
   EvaluationRequest,
-  LLMMessage
+  LLMMessage,
+  LLMToolDefinition
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
 
@@ -43,27 +44,115 @@ export class OpenAICanonicalEvaluationStrategy
     //response api
     if (response.output) {
       for (const outputElement of response.output) {
-        if (outputElement.type === 'message' && outputElement.content) {
-          for (const contentElement of outputElement.content) {
-            if (contentElement.type === 'text' && contentElement.text) {
-              messages.push({
-                  role: outputElement.role,
-                  content: contentElement.text,
-                });
-            } else {
-              throw new Error("Invalid output: " + JSON.stringify(contentElement));
+        switch (outputElement.type) {
+          case 'message':
+            if (outputElement.content) {
+              for (const contentElement of outputElement.content) {
+                if (contentElement.type === 'text' && contentElement.text) {
+                  messages.push({
+                    role: outputElement.role,
+                    content: contentElement.text,
+                  });
+                } else {
+                  throw new Error("Invalid output: " + JSON.stringify(contentElement));
+                }
+              }
             }
-          }
+            break;
+          // function calls based on https://platform.openai.com/docs/api-reference/responses/create
+          case 'web_search_call':
+            messages.push({
+              role: "assistant" as const,
+              tool_calls: [{
+              name: outputElement.name,
+                arguments: {},
+                id: outputElement.id,
+              }],
+            });
+            break;
+          case 'file_search_call':
+            let toolArguments = outputElement.queries? {"queries": outputElement?.queries} : {};
+            messages.push({
+              role: "assistant" as const,
+              tool_calls: [{
+              name: outputElement.name,
+              arguments: toolArguments,
+              id: outputElement.id,
+              }],
+            });
+            break;
+          case 'function_call': 
+            messages.push({
+              role: "assistant" as const,
+              tool_calls: [{
+              name: outputElement.name,
+              arguments: JSON.parse(outputElement.arguments),
+              id: outputElement.id,
+              }],
+            });
+            break;
         }
       }
     }
-    
 
-    if (messages.length > 0) {
-      return {
-        messages: messages,
-      };
-    }
-    throw new Error("Invalid request or response");
+    let available_tools: LLMToolDefinition[] = convertToolsToLLMDefinitions(request?.tools);
+    return {
+      messages: messages,
+      available_tools: available_tools,
+    };
   }
+}
+
+export function convertToolsToLLMDefinitions(tools: unknown[]): LLMToolDefinition[] {
+  const results: LLMToolDefinition[] = [];
+  
+  for (const tool of tools) {
+    // Check if it's a valid tool object
+    if (!tool || typeof tool !== 'object') {
+      continue;
+    }
+    
+    const toolObj = tool as any;
+    
+    // Handle FunctionTool type
+    if (toolObj.type === 'function' && toolObj.function) {
+      const functionDef = toolObj.function;
+      
+      const llmTool: LLMToolDefinition = {
+        name: functionDef.name || 'unnamed_function',
+        description: functionDef.description || 'No description provided',
+        parameters: functionDef.parameters || {}
+      };
+      
+      results.push(llmTool);
+    }
+    
+    // Handle other tool types that might have different structures
+    else if (toolObj.name && typeof toolObj.name === 'string') {
+      // Generic tool with name property
+      const llmTool: LLMToolDefinition = {
+        name: toolObj.name,
+        description: toolObj.description || 'No description provided',
+        parameters: toolObj.parameters || toolObj.args || {}
+      };
+      
+      results.push(llmTool);
+    }
+    
+    // Handle Vercel AI SDK tool format
+    else if (toolObj.description && toolObj.parameters) {
+      // Extract name from tool (might need to be provided or generated)
+      const name = toolObj.name || `tool_${results.length}`;
+      
+      const llmTool: LLMToolDefinition = {
+        name: name,
+        description: toolObj.description,
+        parameters: toolObj.parameters
+      };
+      
+      results.push(llmTool);
+    }
+  }
+  
+  return results;
 }

@@ -21,7 +21,7 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
     }
 
     if (Array.isArray(response)) {
-      if (response.length > 0 && typeof response === 'string') {
+      if (response.length > 0 && typeof response[0] === 'string') {
         const responseAsStrings: string[] = response
         const mergedContent = responseAsStrings
         .filter(item => typeof item === 'string')

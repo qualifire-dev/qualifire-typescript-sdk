@@ -99,27 +99,6 @@ export class Qualifire {
 
     const evaluationRequest = requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
 
-    let accumulatedInput: string[] = [];
-    let accumulatedOutput: string[] = [];
-    if (evaluationRequest.messages) {
-      for (const message of evaluationRequest.messages) {
-        if (!message.content) {
-          break;
-        }
-
-        switch (message.role) {
-          case 'user':
-            accumulatedInput.push(message.content);
-            break;
-          case 'assistant':
-            accumulatedOutput.push(message.content);
-            break;
-        }
-      }
-    }
-    evaluationRequest.input = accumulatedInput.join('\n');
-    evaluationRequest.output = accumulatedOutput.join('\n');
-
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {messages: evaluationRequest.messages,
       dangerous_content_check: evaluationModernRequest.dangerousContentCheck,
