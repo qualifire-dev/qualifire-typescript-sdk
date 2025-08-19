@@ -15,31 +15,45 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         model: 'gpt-4o',
         messages: [
           { role: 'system' as const, content: 'Talk like a pirate.' },
-          { role: 'user' as const, content: 'Are semicolons optional in JavaScript?' }
-        ]
+          {
+            role: 'user' as const,
+            content: 'Are semicolons optional in JavaScript?',
+          },
+        ],
       };
 
       // Load chat completions response
-      const responsePath = path.join(__dirname, '../temp', 'openai.chat.completions.response.json');
+      const responsePath = path.join(
+        __dirname,
+        '../test/res',
+        'openai.chat.completions.response.json'
+      );
       const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
 
-      const result = converter.convertToQualifireEvaluationRequest(request, response);
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
 
       expect(result.messages).toBeDefined();
-      expect(result.messages.length).toBe(3); // system, user, assistant
+      expect(result.messages?.length).toBe(3); // system, user, assistant
 
       // Should have system message
-      const systemMessage = result.messages.find(m => m.role === 'system');
+      const systemMessage = result.messages?.find(m => m.role === 'system');
       expect(systemMessage).toBeDefined();
       expect(systemMessage?.content).toBe('Talk like a pirate.');
 
       // Should have user message
-      const userMessage = result.messages.find(m => m.role === 'user');
+      const userMessage = result.messages?.find(m => m.role === 'user');
       expect(userMessage).toBeDefined();
-      expect(userMessage?.content).toBe('Are semicolons optional in JavaScript?');
+      expect(userMessage?.content).toBe(
+        'Are semicolons optional in JavaScript?'
+      );
 
       // Should have assistant message
-      const assistantMessage = result.messages.find(m => m.role === 'assistant');
+      const assistantMessage = result.messages?.find(
+        m => m.role === 'assistant'
+      );
       expect(assistantMessage).toBeDefined();
       expect(assistantMessage?.content).toBeTruthy();
       expect(assistantMessage?.content).toContain('Arrr'); // Pirate language
@@ -50,21 +64,30 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
   describe('responses API', () => {
     it('should convert OpenAI responses API response', () => {
       const request = {
-        model: "gpt-5",
-        input: "Write a one-sentence bedtime story about a unicorn."
+        model: 'gpt-5',
+        input: 'Write a one-sentence bedtime story about a unicorn.',
       };
 
-      // Load responses API response  
-      const responsePath = path.join(__dirname, '../temp', 'openai.responses.response.json');
+      // Load responses API response
+      const responsePath = path.join(
+        __dirname,
+        '../test/res',
+        'openai.responses.response.json'
+      );
       const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
 
-      const result = converter.convertToQualifireEvaluationRequest(request as any, response);
+      const result = converter.convertToQualifireEvaluationRequest(
+        request as any,
+        response
+      );
 
       expect(result.messages).toBeDefined();
-      expect(result.messages.length).toBeGreaterThan(0);
+      expect(result.messages?.length).toBeGreaterThan(0);
 
       // Should have assistant message from output
-      const assistantMessage = result.messages.find(m => m.role === 'assistant');
+      const assistantMessage = result.messages?.find(
+        m => m.role === 'assistant'
+      );
       expect(assistantMessage).toBeDefined();
       expect(assistantMessage?.content).toContain('unicorn'); // Story content
       expect(assistantMessage?.content).toContain('moonlit'); // Story content
@@ -75,7 +98,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
     it('should handle multiple choices in chat completions', () => {
       const request = {
         model: 'gpt-4',
-        messages: [{ role: 'user' as const, content: 'Hello' }]
+        messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
       const response = {
@@ -83,20 +106,25 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
           {
             index: 0,
             message: { role: 'assistant', content: 'Hi there!' },
-            finish_reason: 'stop'
+            finish_reason: 'stop',
           },
           {
-            index: 1, 
+            index: 1,
             message: { role: 'assistant', content: 'Hello!' },
-            finish_reason: 'stop'
-          }
-        ]
+            finish_reason: 'stop',
+          },
+        ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(request, response);
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
 
-      expect(result.messages.length).toBe(3); // user + 2 assistant messages
-      const assistantMessages = result.messages.filter(m => m.role === 'assistant');
+      expect(result.messages?.length).toBe(3); // user + 2 assistant messages
+      const assistantMessages = result.messages?.filter(
+        m => m.role === 'assistant'
+      );
       expect(assistantMessages.length).toBe(2);
       expect(assistantMessages[0].content).toBe('Hi there!');
       expect(assistantMessages[1].content).toBe('Hello!');
@@ -112,17 +140,20 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
             role: 'assistant',
             content: [
               { type: 'text', text: 'First message' },
-              { type: 'text', text: 'Second message' }
-            ]
-          }
-        ]
+              { type: 'text', text: 'Second message' },
+            ],
+          },
+        ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(request as any, response);
+      const result = converter.convertToQualifireEvaluationRequest(
+        request as any,
+        response
+      );
 
-      expect(result.messages.length).toBe(2);
-      expect(result.messages[0].content).toBe('First message');
-      expect(result.messages[1].content).toBe('Second message');
+      expect(result.messages?.length).toBe(2);
+      expect(result.messages?.[0].content).toBe('First message');
+      expect(result.messages?.[1].content).toBe('Second message');
     });
   });
 
@@ -130,16 +161,20 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
     it('should throw error for invalid request message', () => {
       const request = {
         model: 'gpt-4',
-        messages: [{
-          role: null,
-          content: null
-        }]
+        messages: [
+          {
+            role: null,
+            content: null,
+          },
+        ],
       };
 
       const response = {
-        choices: [{
-          message: { role: 'assistant', content: 'Response' }
-        }]
+        choices: [
+          {
+            message: { role: 'assistant', content: 'Response' },
+          },
+        ],
       };
 
       expect(() => {
@@ -150,13 +185,15 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
     it('should throw error for invalid response choice', () => {
       const request = {
         model: 'gpt-4',
-        messages: [{ role: 'user' as const, content: 'Hello' }]
+        messages: [{ role: 'user' as const, content: 'Hello' }],
       };
 
       const response = {
-        choices: [{
-          message: { role: null, content: null }
-        }]
+        choices: [
+          {
+            message: { role: null, content: null },
+          },
+        ],
       };
 
       expect(() => {
@@ -168,11 +205,13 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       const request = { model: 'gpt-5' };
 
       const response = {
-        output: [{
-          type: 'message',
-          role: 'assistant',
-          content: [{ type: 'invalid', text: null }]
-        }]
+        output: [
+          {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'invalid', text: null }],
+          },
+        ],
       };
 
       expect(() => {
@@ -194,31 +233,41 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
     it('should handle empty messages array', () => {
       const request = { model: 'gpt-4', messages: [] };
       const response = {
-        choices: [{
-          message: { role: 'assistant', content: 'Response' }
-        }]
+        choices: [
+          {
+            message: { role: 'assistant', content: 'Response' },
+          },
+        ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(request, response);
-      expect(result.messages.length).toBe(1);
-      expect(result.messages[0].role).toBe('assistant');
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+      expect(result.messages?.length).toBe(1);
+      expect(result.messages?.[0].role).toBe('assistant');
     });
 
     it('should handle missing optional fields', () => {
       const request = {
         model: 'gpt-4',
-        messages: [{ role: 'user' as const, content: 'Test' }]
+        messages: [{ role: 'user' as const, content: 'Test' }],
       };
 
       const response = {
-        choices: [{
-          message: { role: 'assistant', content: 'Response' }
-          // Missing index, finish_reason
-        }]
+        choices: [
+          {
+            message: { role: 'assistant', content: 'Response' },
+            // Missing index, finish_reason
+          },
+        ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(request, response);
-      expect(result.messages.length).toBe(2);
+      const result = converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+      expect(result.messages?.length).toBe(2);
     });
   });
 });

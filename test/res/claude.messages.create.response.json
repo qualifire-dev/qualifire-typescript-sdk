@@ -1,0 +1,25 @@
+{
+  "id": "msg_011W7x8yqzHoifLjb1Hywtbq",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-4-20250514",
+  "content": [
+    {
+      "type": "text",
+      "text": "To write a terrible prompt for evaluating S&P 500 direction, you should:\n\n- Make it as vague as possible with no specific timeframe\n- Ignore all fundamental and technical analysis\n- Don't mention any economic indicators, earnings data, or market conditions\n- Avoid asking about volatility, volume, or price patterns\n- Never reference historical trends or seasonal patterns\n- Skip any mention of Fed policy, interest rates, or inflation\n- Don't include risk management or probability assessments\n- Make sure to ask for guaranteed predictions rather than probabilistic analysis\n- Avoid any context about current market sentiment or news events\n- Keep it completely generic without any specific data points or metrics\n\nA perfectly unhelpful prompt would be something like: \"Tell me if market go up good or down bad tomorrow yes?\"\n\nThis approach will definitely not give you any meaningful insights for investment decisions!"
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 45,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 0,
+    "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 189,
+    "service_tier": "standard"
+  }
+}
