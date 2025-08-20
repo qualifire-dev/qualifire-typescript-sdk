@@ -1,9 +1,10 @@
 import {
   EvaluationRequest,
   LLMMessage,
+  LLMToolCall,
   LLMToolDefinition
 } from '../../types';
-import { CanonicalEvaluationStrategy, convertToolsToLLMDefinitions } from '../canonical';
+import { CanonicalEvaluationStrategy, convertToolsToLLMDefinitions, convertResponseMessagesToLLMMessages } from '../canonical';
 
 export class OpenAICanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
@@ -14,6 +15,24 @@ export class OpenAICanonicalEvaluationStrategy
     // chat completions api
     let messages: LLMMessage[] = [];
     
+    if (request?.instructions) {
+      messages.push({
+        role: "system",
+        content: request.instructions,
+      });
+    }
+
+    if (request?.input) {
+      if (typeof request.input === 'string') {
+        messages.push({
+          role: "user",
+          content: request.input,
+        });
+      } else {
+        messages.push(...convertResponseMessagesToLLMMessages(request.input));
+      }
+    }
+
     if (request?.messages) {
       for (const message of request.messages) {
         if (message.role && message.content) {
@@ -43,56 +62,7 @@ export class OpenAICanonicalEvaluationStrategy
 
     //response api
     if (response.output) {
-      for (const outputElement of response.output) {
-        switch (outputElement.type) {
-          case 'message':
-            if (outputElement.content) {
-              for (const contentElement of outputElement.content) {
-                if (contentElement.type === 'text' && contentElement.text) {
-                  messages.push({
-                    role: outputElement.role,
-                    content: contentElement.text,
-                  });
-                } else {
-                  throw new Error("Invalid output: " + JSON.stringify(contentElement));
-                }
-              }
-            }
-            break;
-          // function calls based on https://platform.openai.com/docs/api-reference/responses/create
-          case 'web_search_call':
-            messages.push({
-              role: "assistant" as const,
-              tool_calls: [{
-              name: outputElement.name,
-                arguments: {},
-                id: outputElement.id,
-              }],
-            });
-            break;
-          case 'file_search_call':
-            let toolArguments = outputElement.queries? {"queries": outputElement?.queries} : {};
-            messages.push({
-              role: "assistant" as const,
-              tool_calls: [{
-              name: outputElement.name,
-              arguments: toolArguments,
-              id: outputElement.id,
-              }],
-            });
-            break;
-          case 'function_call': 
-            messages.push({
-              role: "assistant" as const,
-              tool_calls: [{
-              name: outputElement.name,
-              arguments: JSON.parse(outputElement.arguments),
-              id: outputElement.id,
-              }],
-            });
-            break;
-        }
-      }
+      messages.push(...convertResponseMessagesToLLMMessages(response.output));
     }
 
     let available_tools: LLMToolDefinition[] = [];
@@ -100,8 +70,11 @@ export class OpenAICanonicalEvaluationStrategy
       available_tools = convertToolsToLLMDefinitions(request?.tools);
     }
     return {
-      messages: messages,
-      available_tools: available_tools,
+      messages,
+      available_tools,
     };
   }
 }
+
+
+

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { EvaluationRequest, LLMMessage, LLMToolCall, LLMToolDefinition } from "../../types";
-import { CanonicalEvaluationStrategy } from "../canonical";
+import { CanonicalEvaluationStrategy, convertResponseMessagesToLLMMessages } from "../canonical";
 export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationStrategy {
     async convertToQualifireEvaluationRequest(request: any, response: any): Promise<EvaluationRequest> {
 
@@ -25,21 +25,26 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
           role: 'user',
           content: String(request.prompt)
         })
+      } else if (request.messages) {
+        messages.push(...convertResponseMessagesToLLMMessages(request.messages));
       }
-        let mergedContent = [];
-        for await (const textPart of response.textStream) {
-          mergedContent.push(textPart);
-        }
-        
+
+      let mergedContent = [];
+      for await (const textPart of response.textStream) {
+        mergedContent.push(textPart);
+      }
+      
+      if (mergedContent.length > 0) {
         messages.push({
             role: 'assistant',
             content: mergedContent.join('')
           });
+      }
 
       // Once we know we have a stream text property we are in a streamText response and can check tool calls async.
       if (response.toolCalls) {
-        let toolsCalls = await response.toolCalls
-        for (const toolCall of toolsCalls) {
+        let toolCalls = await response.toolCalls
+        for (const toolCall of toolCalls) {
           messages.push({
             role: 'assistant',
             tool_calls: [{
@@ -50,6 +55,21 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
           });
         }
       }
+
+      if (response.toolResults) {
+        let toolResults = await response.toolResults
+        for (const toolResult of toolResults) {
+          messages.push({
+            role: 'tool',
+            tool_calls: [{
+              name: toolResult.toolName,
+              arguments: toolResult.output,
+              id: toolResult.toolCallId
+            }]
+          });
+        }
+      }
+
     // generateText response
     } else {
       // generateText response has a text string property
@@ -62,17 +82,17 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
 
       // generateText response is a string
       if (response?.request?.body?.input) {
-          messages.push(...this.convertResponseMessagesToLLMMessages(response?.request?.body?.input))
+          messages.push(...convertResponseMessagesToLLMMessages(response?.request?.body?.input))
       }
 
       // generateText response is a string
       if (response?.response?.messages) {
-          messages.push(...this.convertResponseMessagesToLLMMessages(response.response.messages));
+          messages.push(...convertResponseMessagesToLLMMessages(response.response.messages));
       }
 
       // for generateText
       if (response.messages) {
-          messages.push(...this.convertResponseMessagesToLLMMessages(response.messages));
+          messages.push(...convertResponseMessagesToLLMMessages(response.messages));
       }
     }
 
@@ -102,50 +122,4 @@ export class VercelAICanonicalEvaluationStrategy implements CanonicalEvaluationS
     }
     return results;
   }
-
-  private convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
-    let extracted_messages: LLMMessage[] = [];
-
-    for (const message of messages) {
-      if (typeof message.content === 'string') {
-        extracted_messages.push({
-          role: message.role,
-          content: message.content,
-        });
-      } else {
-        let content: string[] = [];
-        let tool_calls: LLMToolCall[] = [];
-        let messageContents = [];
-        if (message.content) {
-          messageContents = message.content;
-        } else if (message.parts) {
-          messageContents = message.parts;
-        }
-        for (const part of messageContents) {
-          if (part.type === 'text' || part.type === 'input_text') {
-            content.push(part.text || '');
-          } else if (part.type === 'tool-call') {
-            tool_calls.push({
-              name: part.toolName,
-              arguments: part.input,
-              id: part.toolCallId
-            });
-          } else if (part.type === 'tool-result') {
-            tool_calls.push({
-              name: part.toolName,
-              arguments: part.output,
-              id: part.toolCallId
-            });
-          }
-        }
-        extracted_messages.push({
-          role: message.role,
-          content: content.join(' '),
-          tool_calls: tool_calls,
-        });
-      }
-    }
-    return extracted_messages;
-  }
 }
-

@@ -1,4 +1,4 @@
-import { EvaluationRequest, LLMToolDefinition } from '../types';
+import { EvaluationRequest, LLMToolDefinition, LLMToolCall, LLMMessage } from '../types';
 
 export interface CanonicalEvaluationStrategy {
   convertToQualifireEvaluationRequest(
@@ -36,7 +36,8 @@ export function convertToolsToLLMDefinitions(tools: unknown[]): LLMToolDefinitio
       const llmTool: LLMToolDefinition = {
         name: toolObj.name,
         description: toolObj.description,
-        parameters: toolObj.parameters || toolObj.args || {}
+        // toolObj.parameters?.properties appears in openai responses
+        parameters: toolObj.parameters?.properties || toolObj.parameters || toolObj.args || {}
       };
       
       results.push(llmTool);
@@ -58,4 +59,123 @@ export function convertToolsToLLMDefinitions(tools: unknown[]): LLMToolDefinitio
   }
   
   return results;
+}
+
+// Input can be all of the options mentioned in the parameter ResponseInputItem is also possible but not exported in openai-node so added as any[]
+export function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
+  let extracted_messages: LLMMessage[] = [];
+
+  for (const message of messages) {
+    // response api
+    if (message.type == 'function_call') { 
+      extracted_messages.push({
+        role: "assistant" as const,
+        tool_calls: [{
+          name: message.name,
+          arguments: JSON.parse(message.arguments),
+          id: message.call_id,
+        }],
+      });
+    continue
+    }
+    if (typeof message.content === 'string') {
+      extracted_messages.push({
+        role: message.role,
+        content: message.content,
+      });
+      continue;
+    }
+    let content: string[] = [];
+    let tool_calls: LLMToolCall[] = [];
+    let role: string = message.role;
+    let messageContents = [];
+    if (message.content) {
+      messageContents = message.content;
+    } else if (message.parts) {
+      messageContents = message.parts;
+    } else {
+      continue;
+    }
+    for (const part of messageContents) {
+      switch (message.type) {
+        case 'message':
+          if (message.content) {
+            for (const contentElement of message.content) {
+              switch (contentElement.type) {
+                case 'output_text':    
+                  role = "tool" as const; // This is an output of a tool call so it's made by a tool.
+                  content.push(contentElement.text);
+                  break;
+                case 'text':
+                case 'input_text':
+                  content.push(contentElement.text);
+                  break;
+                default:
+                  throw new Error("Invalid output: " + JSON.stringify(contentElement));
+              }
+            }
+            if (content.length > 0) {
+              extracted_messages.push({
+                role,
+                content: content.join(' '),
+                tool_calls,
+              });
+            }        
+          }
+          break;
+        // function calls based on https://platform.openai.com/docs/api-reference/responses/create
+        case 'web_search_call':
+          extracted_messages.push({
+            role: "assistant" as const,
+            tool_calls: [{
+            name: message.name,
+              arguments: {},
+              id: message.id,
+            }],
+          });
+          break;
+        case 'file_search_call':
+          let toolArguments = message.queries? {"queries": message?.queries} : {};
+          extracted_messages.push({
+            role: "assistant" as const,
+            tool_calls: [{
+            name: message.name,
+            arguments: toolArguments,
+            id: message.id,
+            }],
+          });
+          break;
+        case 'function_call': 
+          extracted_messages.push({
+            role: "assistant" as const,
+            tool_calls: [{
+              name: message.name,
+              arguments: JSON.parse(message.arguments),
+              id: message.id,
+            }],
+          });
+          break;
+        case 'text':
+          content.push(part.text || '');
+          break
+        case 'tool-call':
+          tool_calls.push({
+            name: message.toolName,
+            arguments: message.input,
+            id: message.toolCallId
+          });
+          break
+        case 'tool-result':
+          tool_calls.push({
+            name: message.toolName,
+            arguments: message.output,
+            id: message.toolCallId
+          });
+          break
+        default:
+          throw new Error("Invalid output: " + JSON.stringify(message));
+      }
+    }
+  }
+  return extracted_messages;
 }
