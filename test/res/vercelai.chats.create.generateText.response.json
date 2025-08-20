@@ -1,0 +1,223 @@
+{
+  "steps": [
+    {
+      "content": [
+        {
+          "type": "tool-call",
+          "toolCallId": "call_IDHWF10F4P6DJa38UV7uubl3",
+          "toolName": "weather",
+          "input": {
+            "location": "Antarctica"
+          }
+        },
+        {
+          "type": "tool-result",
+          "toolCallId": "call_IDHWF10F4P6DJa38UV7uubl3",
+          "toolName": "weather",
+          "input": {
+            "location": "Antarctica"
+          },
+          "output": {
+            "location": "Antarctica",
+            "temperature": 4
+          }
+        }
+      ],
+      "finishReason": "tool-calls",
+      "usage": {
+        "inputTokens": 77,
+        "outputTokens": 8,
+        "totalTokens": 85,
+        "reasoningTokens": 0,
+        "cachedInputTokens": 0
+      },
+      "warnings": [],
+      "request": {
+        "body": {
+          "model": "gpt-4o",
+          "input": [
+            {
+              "role": "system",
+              "content": "You are a smart assistant that uses tools to answer questions"
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "What is the weather in antartica"
+                }
+              ]
+            }
+          ],
+          "tools": [
+            {
+              "type": "function",
+              "name": "weather",
+              "description": "Get the weather in a location",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "location": {
+                    "type": "string",
+                    "description": "The location to get the weather for"
+                  }
+                },
+                "required": [
+                  "location"
+                ]
+              },
+              "strict": false
+            }
+          ],
+          "tool_choice": "required"
+        }
+      },
+      "response": {
+        "id": "resp_68a572e5393c8194b8161ed3e4e71b6103ef22f4531b5da9",
+        "timestamp": "2025-08-20T07:01:57.000Z",
+        "modelId": "gpt-4o-2024-08-06",
+        "headers": {
+          "alt-svc": "h3=\":443\"; ma=86400",
+          "cf-cache-status": "DYNAMIC",
+          "cf-ray": "972005b48d712187-TLV",
+          "connection": "keep-alive",
+          "content-encoding": "br",
+          "content-type": "application/json",
+          "date": "Wed, 20 Aug 2025 07:01:58 GMT",
+          "openai-organization": "qualifire-5seurl",
+          "openai-processing-ms": "870",
+          "openai-project": "proj_jasHWfxH02dCCzj2wypWKD1y",
+          "openai-version": "2020-10-01",
+          "server": "cloudflare",
+          "set-cookie": "_cfuvid=G6Gn0xBGzuVZMebPXMLyKc2xM8_ibxeCPNKTzwt2Ueo-1755673318159-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None",
+          "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
+          "transfer-encoding": "chunked",
+          "x-content-type-options": "nosniff",
+          "x-envoy-upstream-service-time": "877",
+          "x-ratelimit-limit-requests": "10000",
+          "x-ratelimit-limit-tokens": "2000000",
+          "x-ratelimit-remaining-requests": "9999",
+          "x-ratelimit-remaining-tokens": "1999705",
+          "x-ratelimit-reset-requests": "6ms",
+          "x-ratelimit-reset-tokens": "8ms",
+          "x-request-id": "req_b97cd6f4d389e2672f99ba9db8efc4a2"
+        },
+        "body": {
+          "id": "resp_68a572e5393c8194b8161ed3e4e71b6103ef22f4531b5da9",
+          "object": "response",
+          "created_at": 1755673317,
+          "status": "completed",
+          "background": false,
+          "error": null,
+          "incomplete_details": null,
+          "instructions": null,
+          "max_output_tokens": null,
+          "max_tool_calls": null,
+          "model": "gpt-4o-2024-08-06",
+          "output": [
+            {
+              "id": "fc_68a572e5bc008194b656788e203d18f203ef22f4531b5da9",
+              "type": "function_call",
+              "status": "completed",
+              "arguments": "{\"location\":\"Antarctica\"}",
+              "call_id": "call_IDHWF10F4P6DJa38UV7uubl3",
+              "name": "weather"
+            }
+          ],
+          "parallel_tool_calls": true,
+          "previous_response_id": null,
+          "prompt_cache_key": null,
+          "reasoning": {
+            "effort": null,
+            "summary": null
+          },
+          "safety_identifier": null,
+          "service_tier": "default",
+          "store": true,
+          "temperature": 1,
+          "text": {
+            "format": {
+              "type": "text"
+            },
+            "verbosity": "medium"
+          },
+          "tool_choice": "required",
+          "tools": [
+            {
+              "type": "function",
+              "description": "Get the weather in a location",
+              "name": "weather",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "location": {
+                    "type": "string",
+                    "description": "The location to get the weather for"
+                  }
+                },
+                "required": [
+                  "location"
+                ]
+              },
+              "strict": false
+            }
+          ],
+          "top_logprobs": 0,
+          "top_p": 1,
+          "truncation": "disabled",
+          "usage": {
+            "input_tokens": 77,
+            "input_tokens_details": {
+              "cached_tokens": 0
+            },
+            "output_tokens": 8,
+            "output_tokens_details": {
+              "reasoning_tokens": 0
+            },
+            "total_tokens": 85
+          },
+          "user": null,
+          "metadata": {}
+        },
+        "messages": [
+          {
+            "role": "assistant",
+            "content": [
+              {
+                "type": "tool-call",
+                "toolCallId": "call_IDHWF10F4P6DJa38UV7uubl3",
+                "toolName": "weather",
+                "input": {
+                  "location": "Antarctica"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "content": [
+              {
+                "type": "tool-result",
+                "toolCallId": "call_IDHWF10F4P6DJa38UV7uubl3",
+                "toolName": "weather",
+                "output": {
+                  "type": "json",
+                  "value": {
+                    "location": "Antarctica",
+                    "temperature": 4
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "providerMetadata": {
+        "openai": {
+          "responseId": "resp_68a572e5393c8194b8161ed3e4e71b6103ef22f4531b5da9"
+        }
+      }
+    }
+  ]
+}
