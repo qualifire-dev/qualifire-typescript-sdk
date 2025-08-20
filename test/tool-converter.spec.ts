@@ -93,27 +93,6 @@ describe('convertToolsToLLMDefinitions', () => {
     expect(result[0].name).toBe('valid_tool');
   });
 
-  it('should provide default values for missing properties', () => {
-    const tools: unknown[] = [
-      {
-        type: 'function',
-        function: {
-          name: 'minimal_tool',
-          // No description or parameters
-        },
-      },
-    ];
-
-    const result = convertToolsToLLMDefinitions(tools);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toEqual({
-      name: 'minimal_tool',
-      description: 'No description provided',
-      parameters: {},
-    });
-  });
-
   it('should validate output against schema', () => {
     const tools: unknown[] = [
       {

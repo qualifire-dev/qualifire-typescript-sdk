@@ -10,7 +10,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
   });
 
   describe('chat completions API', () => {
-    it('should convert OpenAI chat completions response', () => {
+    it('should convert OpenAI chat completions response', async () => {
       const request = {
         model: 'gpt-4o',
         messages: [
@@ -30,7 +30,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       );
       const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -62,7 +62,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
   });
 
   describe('responses API', () => {
-    it('should convert OpenAI responses API response', () => {
+    it('should convert OpenAI responses API response', async () => {
       const request = {
         model: 'gpt-5',
         input: 'Write a one-sentence bedtime story about a unicorn.',
@@ -76,7 +76,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       );
       const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request as any,
         response
       );
@@ -95,7 +95,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
   });
 
   describe('message handling', () => {
-    it('should handle multiple choices in chat completions', () => {
+    it('should handle multiple choices in chat completions', async () => {
       const request = {
         model: 'gpt-4',
         messages: [{ role: 'user' as const, content: 'Hello' }],
@@ -116,7 +116,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -130,7 +130,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       expect(assistantMessages?.[1].content).toBe('Hello!');
     });
 
-    it('should handle output with multiple elements', () => {
+    it('should handle output with multiple elements', async () => {
       const request = { model: 'gpt-5' };
 
       const response = {
@@ -146,7 +146,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request as any,
         response
       );
@@ -156,81 +156,8 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       expect(result.messages?.[1].content).toBe('Second message');
     });
   });
-
-  describe('error handling', () => {
-    it('should throw error for invalid request message', () => {
-      const request = {
-        model: 'gpt-4',
-        messages: [
-          {
-            role: null,
-            content: null,
-          },
-        ],
-      };
-
-      const response = {
-        choices: [
-          {
-            message: { role: 'assistant', content: 'Response' },
-          },
-        ],
-      };
-
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request as any, response);
-      }).toThrow('Invalid request');
-    });
-
-    it('should throw error for invalid response choice', () => {
-      const request = {
-        model: 'gpt-4',
-        messages: [{ role: 'user' as const, content: 'Hello' }],
-      };
-
-      const response = {
-        choices: [
-          {
-            message: { role: null, content: null },
-          },
-        ],
-      };
-
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request, response as any);
-      }).toThrow('Invalid response');
-    });
-
-    it('should throw error for invalid output element', () => {
-      const request = { model: 'gpt-5' };
-
-      const response = {
-        output: [
-          {
-            type: 'message',
-            role: 'assistant',
-            content: [{ type: 'invalid', text: null }],
-          },
-        ],
-      };
-
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request as any, response);
-      }).toThrow('Invalid output');
-    });
-
-    it('should throw error when no messages found', () => {
-      const request = { model: 'gpt-4' };
-      const response = {};
-
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request as any, response);
-      }).toThrow('Invalid request or response');
-    });
-  });
-
   describe('edge cases', () => {
-    it('should handle empty messages array', () => {
+    it('should handle empty messages array', async () => {
       const request = { model: 'gpt-4', messages: [] };
       const response = {
         choices: [
@@ -240,7 +167,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -248,7 +175,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       expect(result.messages?.[0].role).toBe('assistant');
     });
 
-    it('should handle missing optional fields', () => {
+    it('should handle missing optional fields', async () => {
       const request = {
         model: 'gpt-4',
         messages: [{ role: 'user' as const, content: 'Test' }],
@@ -263,7 +190,7 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );

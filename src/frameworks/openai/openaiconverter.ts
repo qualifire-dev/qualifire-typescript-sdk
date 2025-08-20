@@ -95,7 +95,10 @@ export class OpenAICanonicalEvaluationStrategy
       }
     }
 
-    let available_tools: LLMToolDefinition[] = convertToolsToLLMDefinitions(request?.tools);
+    let available_tools: LLMToolDefinition[] = [];
+    if (request?.tools) {
+      available_tools = convertToolsToLLMDefinitions(request?.tools);
+    }
     return {
       messages: messages,
       available_tools: available_tools,

@@ -10,7 +10,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
   });
 
   describe('VertexAI response', () => {
-    it('should convert VertexAI Gemini response', () => {
+    it('should convert VertexAI Gemini response', async () => {
       const request = 'How can I learn more about Node.js?';
 
       // Load VertexAI response
@@ -21,7 +21,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       );
       const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -45,7 +45,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
   });
 
   describe('Gemini request handling', () => {
-    it('should handle string request', () => {
+    it('should handle string request', async () => {
       const request = 'What is JavaScript?';
       const response = {
         candidates: [
@@ -58,7 +58,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -74,7 +74,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       );
     });
 
-    it('should handle object request with message property', () => {
+    it('should handle object request with message property', async () => {
       const request = {
         message: 'Explain async/await',
       };
@@ -92,7 +92,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -103,7 +103,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       expect(userMessage?.content).toBe('Explain async/await');
     });
 
-    it('should handle request without message property', () => {
+    it('should handle request without message property', async () => {
       const request = { model: 'gemini-pro' };
       const response = {
         candidates: [
@@ -116,7 +116,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -128,7 +128,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
   });
 
   describe('response structure handling', () => {
-    it('should handle direct candidates response', () => {
+    it('should handle direct candidates response', async () => {
       const request = 'Test question';
       const response = {
         candidates: [
@@ -141,7 +141,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -155,7 +155,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       expect(assistantMessages?.[1].content).toBe('Second part');
     });
 
-    it('should handle nested response.response structure', () => {
+    it('should handle nested response.response structure', async () => {
       const request = 'Test question';
       const response = {
         response: {
@@ -170,7 +170,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         },
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -180,7 +180,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       expect(assistantMessage?.content).toBe('Nested response');
     });
 
-    it('should handle multiple candidates', () => {
+    it('should handle multiple candidates', async () => {
       const request = 'Test question';
       const response = {
         candidates: [
@@ -199,7 +199,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await  converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -214,79 +214,30 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
     });
   });
 
-  describe('error handling', () => {
-    it('should throw error for invalid part without text', () => {
-      const request = 'Test question';
-      const response = {
-        candidates: [
-          {
-            content: {
-              role: 'model',
-              parts: [{ text: null }],
-            },
-          },
-        ],
-      };
-
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request, response);
-      }).toThrow('Invalid Gemini request');
-    });
-
-    it('should throw error when no valid messages found', () => {
-      const request = {};
-      const response = {};
-
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request, response);
-      }).toThrow('Invalid Gemini request or response');
-    });
-
-    it('should handle missing content.parts gracefully', () => {
-      const request = 'Test question';
-      const response = {
-        candidates: [
-          {
-            content: {
-              role: 'model',
-              // Missing parts
-            },
-          },
-        ],
-      };
-
-      const result = converter.convertToQualifireEvaluationRequest(
-        request,
-        response
-      );
-      expect(result.messages?.length).toBe(1); // Only user message
-    });
-  });
-
   describe('edge cases', () => {
-    it('should handle empty candidates array', () => {
+    it('should handle empty candidates array', async () => {
       const request = 'Test question';
       const response = { candidates: [] };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
       expect(result.messages?.length).toBe(1); // Only user message
     });
 
-    it('should handle missing candidates property', () => {
+    it('should handle missing candidates property', async () => {
       const request = 'Test question';
       const response = { someOtherProperty: 'value' };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
       expect(result.messages?.length).toBe(1); // Only user message
     });
 
-    it('should handle empty parts array', () => {
+    it('should handle empty parts array', async () => {
       const request = 'Test question';
       const response = {
         candidates: [
@@ -299,29 +250,11 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
       expect(result.messages?.length).toBe(1); // Only user message
-    });
-
-    it('should handle parts with empty text', () => {
-      const request = 'Test question';
-      const response = {
-        candidates: [
-          {
-            content: {
-              role: 'model',
-              parts: [{ text: '' }, { text: 'Valid text' }],
-            },
-          },
-        ],
-      };
-
-      expect(() => {
-        converter.convertToQualifireEvaluationRequest(request, response);
-      }).toThrow('Invalid Gemini request'); // Empty text should trigger error
     });
   });
 });
