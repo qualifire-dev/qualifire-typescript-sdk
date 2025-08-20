@@ -1,10 +1,9 @@
 import {
   EvaluationRequest,
   LLMMessage,
-  LLMToolCall,
   LLMToolDefinition
 } from '../../types';
-import { CanonicalEvaluationStrategy, convertToolsToLLMDefinitions, convertResponseMessagesToLLMMessages } from '../canonical';
+import { CanonicalEvaluationStrategy, convertResponseMessagesToLLMMessages, convertToolsToLLMDefinitions } from '../canonical';
 
 export class OpenAICanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
@@ -12,7 +11,6 @@ export class OpenAICanonicalEvaluationStrategy
     request: any,
     response: any
   ): Promise<EvaluationRequest> {
-    // chat completions api
     let messages: LLMMessage[] = [];
     
     if (request?.instructions) {
@@ -49,13 +47,25 @@ export class OpenAICanonicalEvaluationStrategy
     // chat completions api
     if (response?.choices) {
       for (const choice of response.choices) {
-        if (choice.message?.role && choice.message?.content) {
-          messages.push({
+        if (choice.message?.role) {
+          let message: LLMMessage = {
             role: choice.message.role,
-            content: choice.message.content,
-          });
-        } else {
-          throw new Error("Invalid response: " + JSON.stringify(choice));
+          }
+          if (choice.message?.content) {
+            message.content = choice.message.content;
+          }
+          if (choice.message?.tool_calls) {
+            message.tool_calls = choice.message.tool_calls.map((tool_call: any) => ({
+              name: tool_call.function.name,
+              arguments: JSON.parse(tool_call.function.arguments),
+              id: tool_call.id,
+            }));
+          }
+          if (message.content || message.tool_calls) {
+            messages.push(message); 
+          } else {
+            throw new Error("Invalid response: " + JSON.stringify(choice));
+          }
         }
       }
     }
@@ -63,12 +73,21 @@ export class OpenAICanonicalEvaluationStrategy
     //response api
     if (response.output) {
       messages.push(...convertResponseMessagesToLLMMessages(response.output));
+    } else if (response.sequence_number && response.type == 'response.completed') {
+      // For streaming responses
+      if (response.response?.output) {
+        messages.push(...convertResponseMessagesToLLMMessages(response.response.output));
+      } else {
+        throw new Error("Invalid response: " + JSON.stringify(response));
+      }
     }
+    
 
     let available_tools: LLMToolDefinition[] = [];
     if (request?.tools) {
       available_tools = convertToolsToLLMDefinitions(request?.tools);
     }
+
     return {
       messages,
       available_tools,
