@@ -1,4 +1,4 @@
-import { EvaluationRequest, LLMToolDefinition, LLMToolCall, LLMMessage } from '../types';
+import { EvaluationRequest, LLMMessage, LLMToolCall, LLMToolDefinition } from '../types';
 
 export interface CanonicalEvaluationStrategy {
   convertToQualifireEvaluationRequest(
@@ -36,7 +36,6 @@ export function convertToolsToLLMDefinitions(tools: unknown[]): LLMToolDefinitio
       const llmTool: LLMToolDefinition = {
         name: toolObj.name,
         description: toolObj.description,
-        // toolObj.parameters?.properties appears in openai responses
         parameters: toolObj.parameters?.properties || toolObj.parameters || toolObj.args || {}
       };
       
@@ -99,8 +98,8 @@ export function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessag
     for (const part of messageContents) {
       switch (message.type) {
         case 'message':
-          if (message.content) {
-            for (const contentElement of message.content) {
+          if (messageContents) {
+            for (const contentElement of messageContents) {
               switch (contentElement.type) {
                 case 'output_text':    
                   role = "tool" as const; // This is an output of a tool call so it's made by a tool.
@@ -173,9 +172,31 @@ export function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessag
           });
           break
         default:
-          throw new Error("Invalid output: " + JSON.stringify(message));
+          // claude has messages with only one content. In that case we can add a message based on that single content. 
+          if (messageContents.length == 1) {
+            switch (part.type) {
+              case 'tool_use':
+                extracted_messages.push({
+                  role: "assistant" as const,
+                  tool_calls: [{
+                    name: part.name,
+                    arguments: part.input,
+                    id: part.id,
+                  }],
+                });
+                break;
+              case 'tool_result':
+                extracted_messages.push({
+                  role: "tool" as const,
+                  content: JSON.stringify(part.content),
+                });
+                break;
+              default:
+                throw new Error("Invalid output: message - " + JSON.stringify(message) + " part - " + JSON.stringify(part));
+            }
+          }
+        }
       }
     }
-  }
   return extracted_messages;
 }
