@@ -1,4 +1,4 @@
-import { VercelAICanonicalEvaluationStrategy } from '../src/frameworks/vercelai/vercelaiconverter';
+import { VercelAICanonicalEvaluationStrategy } from '../src/frameworks/vercelai/vercelai-converter';
 
 describe('VercelAICanonicalEvaluationStrategy', () => {
   let converter: VercelAICanonicalEvaluationStrategy;

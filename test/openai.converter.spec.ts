@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { OpenAICanonicalEvaluationStrategy } from '../src/frameworks/openai/openaiconverter';
+import { OpenAICanonicalEvaluationStrategy } from '../src/frameworks/openai/openai-converter';
 
 describe('OpenAICanonicalEvaluationStrategy', () => {
   let converter: OpenAICanonicalEvaluationStrategy;

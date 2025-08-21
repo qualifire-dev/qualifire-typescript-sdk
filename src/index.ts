@@ -1,8 +1,8 @@
 import * as traceloop from '@traceloop/node-server-sdk';
-import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claudeconverter';
-import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/geminiconverter';
-import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openaiconverter';
-import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelaiconverter';
+import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-converter';
+import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
+import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
+import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
 import { type EvaluationModernRequest, type EvaluationResponse } from './types';
 
 export type {
@@ -100,7 +100,8 @@ export class Qualifire {
     const evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
-    const body = {messages: evaluationRequest.messages,
+    const body = {
+      messages: evaluationRequest.messages,
       available_tools: evaluationRequest.available_tools,
       dangerous_content_check: evaluationModernRequest.dangerousContentCheck,
       grounding_check: evaluationModernRequest.groundingCheck,
