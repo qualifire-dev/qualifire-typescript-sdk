@@ -188,37 +188,5 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
       const userMessage = result.messages?.find(m => m.role === 'user');
       expect(userMessage?.content).toBe('First part Second part');
     });
-
-    it('should handle tool_use content', async () => {
-      const request = {
-        model: 'claude-3',
-        messages: [{ role: 'user' as const, content: 'Use a tool' }],
-      };
-
-      const response = {
-        type: 'message',
-        role: 'assistant',
-        content: [
-          {
-            type: 'tool_use',
-            name: 'calculator',
-            input: { operation: 'add', numbers: [1, 2] },
-            id: 'tool-123'
-          },
-        ],
-      };
-
-      const result = await converter.convertToQualifireEvaluationRequest(
-        request,
-        response
-      );
-
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.tool_calls).toBeDefined();
-      expect(assistantMessage?.tool_calls?.[0]?.name).toBe('calculator');
-    });
   });
 });

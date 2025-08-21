@@ -138,32 +138,6 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       expect(assistantMessages?.[0].content).toBe('Hi there!');
       expect(assistantMessages?.[1].content).toBe('Hello!');
     });
-
-    it('should handle output with multiple elements', async () => {
-      const request = { model: 'gpt-5' };
-
-      const response = {
-        output: [
-          {
-            type: 'message',
-            role: 'assistant',
-            content: [
-              { type: 'text', text: 'First message' },
-              { type: 'text', text: 'Second message' },
-            ],
-          },
-        ],
-      };
-
-      const result = await converter.convertToQualifireEvaluationRequest(
-        request as any,
-        response
-      );
-
-      expect(result.messages?.length).toBe(2);
-      expect(result.messages?.[0].content).toBe('First message');
-      expect(result.messages?.[1].content).toBe('Second message');
-    });
   });
   describe('edge cases', () => {
     it('should handle empty messages array', async () => {

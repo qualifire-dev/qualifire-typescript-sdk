@@ -42,6 +42,8 @@ export class ClaudeCanonicalEvaluationStrategy
       if (response.type === 'message_start' && response.message) {
         messages.push(...convertResponseMessagesToLLMMessages([response.message]));
       }
+    } else {
+      messages.push(...convertResponseMessagesToLLMMessages([response]));
     }
     
   return {
