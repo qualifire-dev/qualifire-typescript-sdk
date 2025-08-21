@@ -36,7 +36,7 @@ export class GeminiAICanonicalEvaluationStrategy
           for (const part of candidate.content.parts) {
             if (part.text) {
                 messages.push({
-                    role: candidate.content.role,
+                    role: candidate.content.role === 'model' ? 'assistant' : candidate.content.role,
                     content: part.text,
                 });
             } else {
