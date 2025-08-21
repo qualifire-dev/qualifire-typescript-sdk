@@ -63,22 +63,33 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       expect(toolCallMessage?.tool_calls?.[0]?.id).toBe('call-123');
     });
 
-    it('should convert Vercel AI text generation response using existing JSON files', async () => {
-      // Import the existing JSON files
-      const requestData = require('./res/vercelai.chats.create.generateText.request.json');
-      const responseData = require('./res/vercelai.chats.create.response.json');
-
+    it('should convert Vercel AI text generation response using inline data', async () => {
       const request = {
-        system: requestData.system,
-        prompt: requestData.messages[0].content,
-        tools: requestData.tools
+        system: 'You are a smart assistant that uses tools to answer questions',
+        prompt: 'What is the weather in antartica',
+        tools: {
+          weather: {
+            description: 'Get the weather in a location',
+            inputSchema: {
+              jsonSchema: {
+                properties: {
+                  location: {
+                    type: 'string',
+                    description: 'The location to get the weather for'
+                  }
+                }
+              }
+            }
+          }
+        }
       };
 
-      // Create a mock async iterable for textStream using the response data
+      // Create a mock async iterable for textStream
       const mockTextStream = (async function* () {
-        for (const chunk of responseData) {
-          yield chunk;
-        }
+        yield 'The sky often appears blue during the daytime because of the way Earth\'s atmosphere scatters sunlight. ';
+        yield 'When sunlight enters the atmosphere, shorter wavelengths of light (blue and violet) are scattered more than longer wavelengths (red and yellow). ';
+        yield 'Our eyes are more sensitive to blue light, so we see the sky as blue. ';
+        yield 'However, the color of the sky can change based on weather, time of day, and other atmospheric conditions—for example, it might look orange or red at sunrise or sunset, or gray on a cloudy day.';
       })();
 
       const response = {

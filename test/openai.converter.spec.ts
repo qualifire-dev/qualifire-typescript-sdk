@@ -1,5 +1,3 @@
-import fs from 'fs';
-import path from 'path';
 import { OpenAICanonicalEvaluationStrategy } from '../src/frameworks/openai/openai-converter';
 
 describe('OpenAICanonicalEvaluationStrategy', () => {
@@ -22,13 +20,19 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      // Load chat completions response
-      const responsePath = path.join(
-        __dirname,
-        '../test/res',
-        'openai.chat.completions.response.json'
-      );
-      const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
+      // Mock chat completions response
+      const response = {
+        choices: [
+          {
+            index: 0,
+            message: { 
+              role: 'assistant', 
+              content: 'Arrr matey! In JavaScript, semicolons be optional in most cases, but it be good practice to use them for clarity and to avoid potential issues with automatic semicolon insertion.' 
+            },
+            finish_reason: 'stop',
+          },
+        ],
+      };
 
       const result = await converter.convertToQualifireEvaluationRequest(
         request,
@@ -68,13 +72,18 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         input: 'Write a one-sentence bedtime story about a unicorn.',
       };
 
-      // Load responses API response
-      const responsePath = path.join(
-        __dirname,
-        '../test/res',
-        'openai.responses.response.json'
-      );
-      const response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
+      // Mock responses API response
+      const response = {
+        output: [
+          {
+            type: 'message',
+            role: 'assistant',
+            content: [
+              { type: 'text', text: 'Once upon a moonlit night, a gentle unicorn with a silver mane danced through a starlit meadow, spreading magic and wonder to all who dreamed.' },
+            ],
+          },
+        ],
+      };
 
       const result = await converter.convertToQualifireEvaluationRequest(
         request as any,
