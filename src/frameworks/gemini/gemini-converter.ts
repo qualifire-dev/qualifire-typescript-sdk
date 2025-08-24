@@ -12,6 +12,27 @@ export class GeminiAICanonicalEvaluationStrategy
     request: any,
     response: any
   ): Promise<EvaluationRequest> {
+    let {
+      messages: requestMessages,
+      available_tools: requestAvailableTools,
+    } = await this.convertRequest(request);
+
+    const messages: LLMMessage[] = requestMessages || [];
+    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
+
+    // Check if response is streaming (has candidates array)
+    if (response?.candidates) {
+      let responseMessages = await this.handleResponse(response);
+      messages.push(...responseMessages);
+    }
+
+    return {
+      messages,
+      available_tools,
+    };
+  }
+
+  async convertRequest(request: any): Promise<EvaluationRequest> {
     const messages: LLMMessage[] = [];
     const available_tools: LLMToolDefinition[] = [];
 
@@ -44,6 +65,15 @@ export class GeminiAICanonicalEvaluationStrategy
       }
     }
 
+    return {
+      messages,
+      available_tools,
+    };
+  }
+
+  private async handleResponse(response: any): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+
     // VertexAI response contains a response inside the response object.
     if (response?.response?.candidates) {
       response = response.response;
@@ -66,10 +96,7 @@ export class GeminiAICanonicalEvaluationStrategy
       }
     }
 
-    return {
-      messages,
-      available_tools,
-    };
+    return messages;
   }
 }
 
