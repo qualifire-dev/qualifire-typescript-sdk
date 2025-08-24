@@ -5,10 +5,7 @@ import {
   LLMToolDefinition,
 } from '../types';
 
-export interface CanonicalEvaluationStrategy<
-  RequestType,
-  ResponseType
-> {
+export interface CanonicalEvaluationStrategy<RequestType, ResponseType> {
   convertToQualifireEvaluationRequest(
     request: RequestType,
     response: ResponseType

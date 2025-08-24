@@ -6,31 +6,28 @@ import {
 } from '../canonical';
 
 import type { GenerateTextResult, StreamTextResult, ToolSet } from 'ai';
-import { ChatCompletionCreateParamsNonStreaming, ChatCompletionCreateParamsStreaming } from 'openai/resources/chat/completions/completions';
+import {
+  ChatCompletionCreateParamsNonStreaming,
+  ChatCompletionCreateParamsStreaming,
+  ChatCompletionCreateParamsBase,
+} from 'openai/resources/chat/completions/completions';
 import { Completion } from 'openai/resources/completions';
 import { ResponseCreateParamsBase } from 'openai/resources/responses/responses';
 
-
-/*
-create(body: CompletionCreateParamsNonStreaming, options?: Core.RequestOptions): APIPromise<Completion>;
-    create(body: CompletionCreateParamsStreaming, options?: Core.RequestOptions): APIPromise<Stream<Completion>>;
-    create(body: CompletionCreateParamsBase, options?: Core.RequestOptions): APIPromise<Stream<Completion> | Completion>;
-*/
-
-// type OpenAICanonicalEvaluationStrategyRequest = ChatCompletionCreateParamsNonStreaming | ChatCompletionCreateParamsStreaming | ResponseCreateParamsBase;
-// type OpenAICanonicalEvaluationStrategyResponse = GenerateTextResult<ToolSet, any> | StreamTextResult<ToolSet, any> | Completion;
-
-// TOOD - remove temp
-type OpenAICanonicalEvaluationStrategyRequest = any;
 type OpenAICanonicalEvaluationStrategyResponse = any;
+type OpenAICanonicalEvaluationStrategyRequest = any;
 
 export class OpenAICanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy<OpenAICanonicalEvaluationStrategyRequest, OpenAICanonicalEvaluationStrategyResponse> {
-  async convertToQualifireEvaluationRequest(
-    request: OpenAICanonicalEvaluationStrategyRequest,
-    response: OpenAICanonicalEvaluationStrategyResponse
+  implements
+    CanonicalEvaluationStrategy<
+      OpenAICanonicalEvaluationStrategyRequest,
+      OpenAICanonicalEvaluationStrategyResponse
+    > {
+  async convertRequest(
+    request: OpenAICanonicalEvaluationStrategyRequest
   ): Promise<EvaluationRequest> {
     const messages: LLMMessage[] = [];
+    let available_tools: LLMToolDefinition[] = [];
 
     // response api
     // chat completions api
@@ -64,6 +61,58 @@ export class OpenAICanonicalEvaluationStrategy
         }
       }
     }
+
+    if (request?.tools) {
+      available_tools = convertToolsToLLMDefinitions(request?.tools);
+    }
+    return {
+      messages,
+      available_tools,
+    };
+  }
+
+  async convertToQualifireEvaluationRequest(
+    request: OpenAICanonicalEvaluationStrategyRequest,
+    response: OpenAICanonicalEvaluationStrategyResponse
+  ): Promise<EvaluationRequest> {
+    let {
+      messages: requestMessages,
+      available_tools: requestAvailableTools,
+    } = await this.convertRequest(request);
+
+    const messages: LLMMessage[] = requestMessages || [];
+    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
+
+    if (Array.isArray(response)) {
+      let streamingResultMessages = await this.handleStreaming(response);
+      messages.push(...streamingResultMessages);
+    } else {
+      let nonStreamingResultMessages = await this.handleNonStreamingResponse(
+        response
+      );
+      messages.push(...nonStreamingResultMessages);
+    }
+
+    return {
+      messages,
+      available_tools,
+    };
+  }
+
+  private async handleStreaming(
+    response: OpenAICanonicalEvaluationStrategyResponse
+  ): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+    for (const chunk of response) {
+      messages.push(...(await this.handleNonStreamingResponse(chunk)));
+    }
+    return messages;
+  }
+
+  private async handleNonStreamingResponse(
+    response: OpenAICanonicalEvaluationStrategyResponse
+  ): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
 
     // chat completions api
     if (response?.choices) {
@@ -110,14 +159,6 @@ export class OpenAICanonicalEvaluationStrategy
       }
     }
 
-    let available_tools: LLMToolDefinition[] = [];
-    if (request?.tools) {
-      available_tools = convertToolsToLLMDefinitions(request?.tools);
-    }
-
-    return {
-      messages,
-      available_tools,
-    };
+    return messages;
   }
 }

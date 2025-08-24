@@ -3,7 +3,7 @@ import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-co
 import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
-import { type EvaluationModernRequest, type EvaluationResponse, type Framework } from './types';
+import { EvaluationRequest, type EvaluationModernRequest, type EvaluationResponse, type Framework } from './types';
 
 export type {
   EvaluationModernRequest,
@@ -168,7 +168,8 @@ export class Qualifire {
 
     const requestConverter = converterFactory();
 
-    const evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
+    
+    let evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {
