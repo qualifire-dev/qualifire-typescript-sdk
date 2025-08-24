@@ -19,7 +19,7 @@ export class ClaudeCanonicalEvaluationStrategy
     const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
 
     // Check if response is streaming or non-streaming
-    if (this.isClaudeStreamingChunk(response)) {
+    if (Array.isArray(response)) {
       let streamingResultMessages = await this.handleStreaming(response);
       messages.push(...streamingResultMessages);
     } else {
@@ -69,14 +69,14 @@ export class ClaudeCanonicalEvaluationStrategy
     };
   }
 
-  private async handleStreaming(response: any): Promise<LLMMessage[]> {
+  private async handleStreaming(response: any[]): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    // Handle streaming response
-    if (response.type === 'message_start' && response.message) {
-      messages.push(
-        ...convertResponseMessagesToLLMMessages([response.message])
-      );
+    for (const chunk of response) {
+      // Handle streaming chunk with message_start type
+      if (chunk?.type === 'message_start' && chunk.message) {
+        messages.push(...convertResponseMessagesToLLMMessages([chunk.message]));
+      }
     }
 
     return messages;
@@ -87,23 +87,10 @@ export class ClaudeCanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    // Handle non-streaming response
-    messages.push(...convertResponseMessagesToLLMMessages([response]));
+    if (response?.role) {
+      messages.push(...convertResponseMessagesToLLMMessages([response]));
+    }
 
     return messages;
-  }
-
-  private isClaudeStreamingChunk(response: any): boolean {
-    return (
-      response?.type &&
-      [
-        'message_start',
-        'content_block_start',
-        'content_block_delta',
-        'content_block_stop',
-        'message_delta',
-        'message_stop',
-      ].includes(response.type)
-    );
   }
 }

@@ -23,20 +23,56 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         ],
       };
 
-      // Mock streaming response data
-      const response = {
-        type: 'message_start',
-        message: {
-          type: 'message',
-          role: 'assistant',
-          content: [
-            {
-              type: 'text',
-              text: 'Here is a terrible prompt to evaluate if sp500 is going to go up or down...'
-            }
-          ]
-        }
-      };
+      // Mock streaming response data as a list containing different parts
+      const response = [
+        {
+          type: 'message_start',
+          message: {
+            type: 'message',
+            role: 'assistant',
+            content: [
+              {
+                type: 'text',
+                text:
+                  'Here is a terrible prompt to evaluate if sp500 is going to go up or down...',
+              },
+            ],
+          },
+        },
+        {
+          type: 'content_block_start',
+          content_block: {
+            type: 'text',
+            text: '',
+          },
+        },
+        {
+          type: 'content_block_delta',
+          delta: {
+            type: 'text_delta',
+            text: 'Here is a terrible prompt',
+          },
+        },
+        {
+          type: 'content_block_delta',
+          delta: {
+            type: 'text_delta',
+            text: ' to evaluate if sp500 is going to go up or down...',
+          },
+        },
+        {
+          type: 'content_block_stop',
+        },
+        {
+          type: 'message_delta',
+          delta: {
+            stop_reason: 'end_turn',
+          },
+        },
+        {
+          type: 'message_stop',
+        },
+      ];
 
       const result = await converter.convertToQualifireEvaluationRequest(
         request,
@@ -91,9 +127,10 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         content: [
           {
             type: 'text',
-            text: 'Hello! I am doing well, thank you for asking. How can I help you today?'
-          }
-        ]
+            text:
+              'Hello! I am doing well, thank you for asking. How can I help you today?',
+          },
+        ],
       };
 
       const result = await converter.convertToQualifireEvaluationRequest(
