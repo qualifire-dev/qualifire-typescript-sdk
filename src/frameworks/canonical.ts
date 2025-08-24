@@ -5,10 +5,13 @@ import {
   LLMToolDefinition,
 } from '../types';
 
-export interface CanonicalEvaluationStrategy {
+export interface CanonicalEvaluationStrategy<
+  RequestType = any,
+  ResponseType = any
+> {
   convertToQualifireEvaluationRequest(
-    request: any,
-    response: any
+    request: RequestType,
+    response: ResponseType
   ): Promise<EvaluationRequest>;
 }
 export function convertToolsToLLMDefinitions(
@@ -113,8 +116,8 @@ export function convertResponseMessagesToLLMMessages(
     for (const part of messageContents) {
       switch (message.type) {
         case 'message':
-          if (messageContents) {
-            for (const contentElement of messageContents) {
+          if (message.content) {
+            for (const contentElement of message.content) {
               switch (contentElement.type) {
                 case 'output_text':
                   role = 'tool' as const; // This is an output of a tool call so it's made by a tool.

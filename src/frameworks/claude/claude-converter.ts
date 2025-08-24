@@ -5,7 +5,7 @@ import {
 } from '../canonical';
 
 export class ClaudeCanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy {
+  implements CanonicalEvaluationStrategy<any, any> {
   async convertToQualifireEvaluationRequest(
     request: any,
     response: any

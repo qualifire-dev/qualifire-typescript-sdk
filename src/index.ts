@@ -3,12 +3,12 @@ import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-co
 import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
-import { type EvaluationModernRequest, type EvaluationResponse } from './types';
+import { type EvaluationModernRequest, type EvaluationResponse, type Framework } from './types';
 
 export type {
   EvaluationModernRequest,
   EvaluationRequest,
-  EvaluationResponse
+  EvaluationResponse, Framework, LLMMessage
 } from './types';
 
 
@@ -81,7 +81,7 @@ export class Qualifire {
    * ```
    */
   evaluate = async (evaluationModernRequest: EvaluationModernRequest): Promise<EvaluationResponse | undefined> => {
-    const frameworkConverters = {
+    const frameworkConverters: Record<Framework, () => any> = {
       'openai': () => new OpenAICanonicalEvaluationStrategy(),
       'vercelai': () => new VercelAICanonicalEvaluationStrategy(),
       'gemini': () => new GeminiAICanonicalEvaluationStrategy(),
@@ -89,7 +89,7 @@ export class Qualifire {
     };
 
     const supportedFrameworks = Object.keys(frameworkConverters);
-    const converterFactory = frameworkConverters[evaluationModernRequest.framework as keyof typeof frameworkConverters];
+    const converterFactory = frameworkConverters[evaluationModernRequest.framework];
     
     if (!converterFactory) {
       throw new Error(`Unsupported provider: ${evaluationModernRequest.framework}. Supported frameworks: ${supportedFrameworks.join(', ')}`);

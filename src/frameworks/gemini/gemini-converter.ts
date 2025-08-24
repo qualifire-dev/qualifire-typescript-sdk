@@ -7,7 +7,7 @@ import {
 import { CanonicalEvaluationStrategy } from '../canonical';
 
 export class GeminiAICanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy {
+  implements CanonicalEvaluationStrategy<any, any> {
   async convertToQualifireEvaluationRequest(
     request: any,
     response: any

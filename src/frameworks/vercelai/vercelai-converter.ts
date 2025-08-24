@@ -1,16 +1,11 @@
 import { z } from 'zod';
-import {
-  EvaluationRequest,
-  LLMMessage,
-  LLMToolCall,
-  LLMToolDefinition,
-} from '../../types';
+import { EvaluationRequest, LLMMessage, LLMToolDefinition } from '../../types';
 import {
   CanonicalEvaluationStrategy,
   convertResponseMessagesToLLMMessages,
 } from '../canonical';
 export class VercelAICanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy {
+  implements CanonicalEvaluationStrategy<any, any> {
   async convertToQualifireEvaluationRequest(
     request: any,
     response: any

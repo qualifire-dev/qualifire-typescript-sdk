@@ -115,6 +115,7 @@
   },
   "dependencies": {
     "@traceloop/node-server-sdk": "^0.13.3",
+    "ai": "^5.0.22",
     "openai": "^4.28.4",
     "zod": "^4.0.0"
   },

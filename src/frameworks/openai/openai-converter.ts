@@ -5,11 +5,13 @@ import {
   convertToolsToLLMDefinitions,
 } from '../canonical';
 
+import type { GenerateTextResult, ToolSet } from 'ai';
+
 export class OpenAICanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy {
+  implements CanonicalEvaluationStrategy<any, GenerateTextResult<ToolSet, any>> {
   async convertToQualifireEvaluationRequest(
     request: any,
-    response: any
+    response: GenerateTextResult<ToolSet, any>
   ): Promise<EvaluationRequest> {
     const messages: LLMMessage[] = [];
 

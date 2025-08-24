@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// Framework type based on supported frameworks
+const FrameworkEnum = ['openai', 'vercelai', 'gemini', 'claude'] as const;
+export type Framework = (typeof FrameworkEnum)[number];
+
 export const messageSchema = z.object({
   role: z.string(),
   content: z.string().nullable(),
@@ -60,9 +64,15 @@ const SyntaxCheckArgsSchema = z.object({
 });
 
 export const EvaluationRequestModernSchema = z.object({
-  framework: z.string(),
+  framework: z.enum(FrameworkEnum),
   request: z.any().optional(),
   response: z.any().optional(),
+  /** @deprecated Use request/response with framework converters instead */
+  input: z.string().optional(),
+  /** @deprecated Use request/response with framework converters instead */
+  output: z.string().optional(),
+  /** @deprecated Use request/response with framework converters instead */
+  messages: z.array(LLMMessageSchema).optional(),
   dangerousContentCheck: z.boolean().default(false).optional(),
   groundingCheck: z.boolean().default(false).optional(),
   hallucinationsCheck: z.boolean().default(false).optional(),
@@ -75,6 +85,30 @@ export const EvaluationRequestModernSchema = z.object({
   syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
   toolSelectionQualityCheck: z.boolean().default(false).optional(),
   assertions: z.array(z.string()).optional(),
+  // Deprecated snake_case parameters (for backward compatibility)
+  available_tools: z.array(LLMToolDefinitionSchema).optional(),
+  /** @deprecated Use dangerousContentCheck instead */
+  dangerous_content_check: z.boolean().default(false).optional(),
+  /** @deprecated Use groundingCheck instead */
+  grounding_check: z.boolean().default(false).optional(),
+  /** @deprecated Use hallucinationsCheck instead */
+  hallucinations_check: z.boolean().default(false).optional(),
+  /** @deprecated Use harassmentCheck instead */
+  harassment_check: z.boolean().default(false).optional(),
+  /** @deprecated Use hateSpeechCheck instead */
+  hate_speech_check: z.boolean().default(false).optional(),
+  /** @deprecated Use instructionsFollowingCheck instead */
+  instructions_following_check: z.boolean().default(false).optional(),
+  /** @deprecated Use piiCheck instead */
+  pii_check: z.boolean().default(false).optional(),
+  /** @deprecated Use promptInjections instead */
+  prompt_injections: z.boolean().default(false).optional(),
+  /** @deprecated Use sexualContentCheck instead */
+  sexual_content_check: z.boolean().default(false).optional(),
+  /** @deprecated Use syntaxChecks instead */
+  syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+  /** @deprecated Use toolSelectionQualityCheck instead */
+  tool_selection_quality_check: z.boolean().default(false).optional(),
 });
 
 export const EvaluationRequestSchema = z
