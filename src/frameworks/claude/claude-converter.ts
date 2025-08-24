@@ -48,7 +48,7 @@ export class ClaudeCanonicalEvaluationStrategy
     
   return {
     messages,
-    availableTools,
+    available_tools: availableTools,
   };
 }
 
