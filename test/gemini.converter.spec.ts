@@ -16,6 +16,49 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
             parts: [{ text: 'What is JavaScript?' }],
           },
         ],
+        config: {
+          tools: [
+            {
+              functionDeclarations: [
+                {
+                  name: 'get_weather',
+                  description: 'Get the current weather for a location',
+                  parameters: {
+                    properties: {
+                      location: {
+                        type: 'string',
+                        description:
+                          'The city and state, e.g. San Francisco, CA',
+                      },
+                      unit: {
+                        type: 'string',
+                        enum: ['celsius', 'fahrenheit'],
+                      },
+                    },
+                    required: ['location'],
+                  },
+                },
+                {
+                  name: 'calculate_tip',
+                  description: 'Calculate tip amount for a bill',
+                  parameters: {
+                    properties: {
+                      bill_amount: {
+                        type: 'number',
+                        description: 'The bill amount',
+                      },
+                      tip_percentage: {
+                        type: 'number',
+                        description: 'The tip percentage (e.g., 15 for 15%)',
+                      },
+                    },
+                    required: ['bill_amount', 'tip_percentage'],
+                  },
+                },
+              ],
+            },
+          ],
+        },
       };
       const response = {
         candidates: [
@@ -35,15 +78,49 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
 
       expect(result.messages?.length).toBe(2);
 
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage?.content).toBe('What is JavaScript?');
+      expect(result.messages?.[0]?.role).toBe('user');
+      expect(result.messages?.[0]?.content).toBe('What is JavaScript?');
 
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage?.content).toBe(
+      expect(result.messages?.[1]?.role).toBe('assistant');
+      expect(result.messages?.[1]?.content).toBe(
         'JavaScript is a programming language.'
       );
+
+      // Verify tools are properly included
+      expect(result.available_tools).toBeDefined();
+      expect(result.available_tools).toHaveLength(2);
+
+      // Verify first tool (get_weather)
+      expect(result.available_tools?.[0]).toEqual({
+        name: 'get_weather',
+        description: 'Get the current weather for a location',
+        parameters: {
+          location: {
+            type: 'string',
+            description: 'The city and state, e.g. San Francisco, CA',
+          },
+          unit: {
+            type: 'string',
+            enum: ['celsius', 'fahrenheit'],
+          },
+        },
+      });
+
+      // Verify second tool (calculate_tip)
+      expect(result.available_tools?.[1]).toEqual({
+        name: 'calculate_tip',
+        description: 'Calculate tip amount for a bill',
+        parameters: {
+          bill_amount: {
+            type: 'number',
+            description: 'The bill amount',
+          },
+          tip_percentage: {
+            type: 'number',
+            description: 'The tip percentage (e.g., 15 for 15%)',
+          },
+        },
+      });
     });
 
     it('should handle object request with message property', async () => {
@@ -76,8 +153,8 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
 
       expect(result.messages?.length).toBe(2);
 
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage?.content).toBe('Explain async/await');
+      expect(result.messages?.[0]?.role).toBe('user');
+      expect(result.messages?.[0]?.content).toBe('Explain async/await');
     });
 
     it('should handle request without message property', async () => {

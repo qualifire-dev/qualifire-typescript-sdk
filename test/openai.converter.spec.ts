@@ -18,6 +18,50 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
             content: 'Are semicolons optional in JavaScript?',
           },
         ],
+        tools: [
+          {
+            type: 'function' as const,
+            function: {
+              name: 'get_weather',
+              description: 'Get the current weather for a location',
+              parameters: {
+                type: 'object',
+                properties: {
+                  location: {
+                    type: 'string',
+                    description: 'The city and state, e.g. San Francisco, CA',
+                  },
+                  unit: {
+                    type: 'string',
+                    enum: ['celsius', 'fahrenheit'],
+                  },
+                },
+                required: ['location'],
+              },
+            },
+          },
+          {
+            type: 'function' as const,
+            function: {
+              name: 'calculate_tip',
+              description: 'Calculate tip amount for a bill',
+              parameters: {
+                type: 'object',
+                properties: {
+                  bill_amount: {
+                    type: 'number',
+                    description: 'The bill amount',
+                  },
+                  tip_percentage: {
+                    type: 'number',
+                    description: 'The tip percentage (e.g., 15 for 15%)',
+                  },
+                },
+                required: ['bill_amount', 'tip_percentage'],
+              },
+            },
+          },
+        ],
       };
 
       // Mock chat completions response
@@ -44,25 +88,64 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       expect(result.messages?.length).toBe(3); // system, user, assistant
 
       // Should have system message
-      const systemMessage = result.messages?.find(m => m.role === 'system');
-      expect(systemMessage).toBeDefined();
-      expect(systemMessage?.content).toBe('Talk like a pirate.');
+      expect(result.messages?.[0]?.role).toBe('system');
+      expect(result.messages?.[0]?.content).toBe('Talk like a pirate.');
 
       // Should have user message
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage).toBeDefined();
-      expect(userMessage?.content).toBe(
+      expect(result.messages?.[1]?.role).toBe('user');
+      expect(result.messages?.[1]?.content).toBe(
         'Are semicolons optional in JavaScript?'
       );
 
       // Should have assistant message
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toContain(
+      expect(result.messages?.[2]?.role).toBe('assistant');
+      expect(result.messages?.[2]?.content).toContain(
         'Arrr matey! In JavaScript, semicolons be optional in most cases, but it be good practice to use them for clarity and to avoid potential issues with automatic semicolon insertion.'
       );
+
+      // Verify tools are properly included
+      expect(result.available_tools).toBeDefined();
+      expect(result.available_tools).toHaveLength(2);
+
+      // Verify first tool (get_weather)
+      expect(result.available_tools?.[0]).toEqual({
+        name: 'get_weather',
+        description: 'Get the current weather for a location',
+        parameters: {
+          type: 'object',
+          properties: {
+            location: {
+              type: 'string',
+              description: 'The city and state, e.g. San Francisco, CA',
+            },
+            unit: {
+              type: 'string',
+              enum: ['celsius', 'fahrenheit'],
+            },
+          },
+          required: ['location'],
+        },
+      });
+
+      // Verify second tool (calculate_tip)
+      expect(result.available_tools?.[1]).toEqual({
+        name: 'calculate_tip',
+        description: 'Calculate tip amount for a bill',
+        parameters: {
+          type: 'object',
+          properties: {
+            bill_amount: {
+              type: 'number',
+              description: 'The bill amount',
+            },
+            tip_percentage: {
+              type: 'number',
+              description: 'The tip percentage (e.g., 15 for 15%)',
+            },
+          },
+          required: ['bill_amount', 'tip_percentage'],
+        },
+      });
     });
   });
 
@@ -98,13 +181,16 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       expect(result.messages).toBeDefined();
       expect(result.messages?.length).toBeGreaterThan(0);
 
-      // Should have assistant message from output
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
+      // Should have user message from input
+      expect(result.messages?.[0]?.role).toBe('user');
+      expect(result.messages?.[0]?.content).toBe(
+        'Write a one-sentence bedtime story about a unicorn.'
       );
-      expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toContain('unicorn'); // Story content
-      expect(assistantMessage?.content).toContain('moonlit'); // Story content
+
+      // Should have assistant message from output
+      expect(result.messages?.[1]?.role).toBe('assistant');
+      expect(result.messages?.[1]?.content).toContain('unicorn'); // Story content
+      expect(result.messages?.[1]?.content).toContain('moonlit'); // Story content
     });
   });
 
@@ -136,12 +222,11 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
       );
 
       expect(result.messages?.length).toBe(3); // user + 2 assistant messages
-      const assistantMessages = result.messages?.filter(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessages?.length).toBe(2);
-      expect(assistantMessages?.[0].content).toBe('Hi there!');
-      expect(assistantMessages?.[1].content).toBe('Hello!');
+      expect(result.messages?.[0]?.role).toBe('user');
+      expect(result.messages?.[1]?.role).toBe('assistant');
+      expect(result.messages?.[1]?.content).toBe('Hi there!');
+      expect(result.messages?.[2]?.role).toBe('assistant');
+      expect(result.messages?.[2]?.content).toBe('Hello!');
     });
   });
   describe('edge cases', () => {

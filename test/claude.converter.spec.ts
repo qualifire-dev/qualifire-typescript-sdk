@@ -83,25 +83,20 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
       expect(result.messages?.length).toBe(3); // system, user, assistant
 
       // Should have system message
-      const systemMessage = result.messages?.find(m => m.role === 'system');
-      expect(systemMessage).toBeDefined();
-      expect(systemMessage?.content).toBe(
+      expect(result.messages?.[0]?.role).toBe('system');
+      expect(result.messages?.[0]?.content).toBe(
         'You are a not so helpful assistant. Only giving to opposite answers of what I ask.'
       );
 
       // Should have user message
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage).toBeDefined();
-      expect(userMessage?.content).toBe(
+      expect(result.messages?.[1]?.role).toBe('user');
+      expect(result.messages?.[1]?.content).toBe(
         'How to write an awesome prompt to evaluate if sp500 is going to go up or down?'
       );
 
       // Should have assistant message
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toContain(
+      expect(result.messages?.[2]?.role).toBe('assistant');
+      expect(result.messages?.[2]?.content).toContain(
         'Here is a terrible prompt to evaluate if sp500 '
       ); // Content from the response
     });
@@ -256,13 +251,11 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         response
       );
 
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage?.content).toBe('Simple string message');
+      expect(result.messages?.[0]?.role).toBe('user');
+      expect(result.messages?.[0]?.content).toBe('Simple string message');
 
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage?.content).toBe('Simple response');
+      expect(result.messages?.[1]?.role).toBe('assistant');
+      expect(result.messages?.[1]?.content).toBe('Simple response');
     });
 
     it('should handle array content', async () => {
@@ -292,8 +285,8 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         response
       );
 
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage?.content).toBe('First part Second part');
+      expect(result.messages?.[0]?.role).toBe('user');
+      expect(result.messages?.[0]?.content).toBe('First part Second part');
     });
   });
 });

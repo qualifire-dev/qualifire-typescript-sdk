@@ -25,13 +25,13 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         {
           toolName: 'weather_tool',
           input: { location: 'sky', query: 'color' },
-          toolCallId: 'call-123'
-        }
+          toolCallId: 'call-123',
+        },
       ]);
 
       const response = {
         textStream: mockTextStream,
-        toolCalls: mockToolCalls
+        toolCalls: mockToolCalls,
       };
 
       const result = await converter.convertToQualifireEvaluationRequest(
@@ -43,24 +43,31 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       expect(result.messages?.length).toBe(4);
 
       // Should have system message
-      const systemMessage = result.messages?.find(m => m.role === 'system');
-      expect(systemMessage?.content).toBe('You are a helpful assistant.');
+      expect(result.messages?.[0]?.role).toBe('system');
+      expect(result.messages?.[0]?.content).toBe(
+        'You are a helpful assistant.'
+      );
 
       // Should have user message
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage?.content).toBe('Are the sky blue?');
+      expect(result.messages?.[1]?.role).toBe('user');
+      expect(result.messages?.[1]?.content).toBe('Are the sky blue?');
 
       // Should have assistant message with accumulated stream content
-      const assistantMessage = result.messages?.find(m => m.role === 'assistant' && m.content);
-      expect(assistantMessage?.content).toBe('Yes, the sky is blue. It appears blue due to Rayleigh scattering.');
+      expect(result.messages?.[2]?.role).toBe('assistant');
+      expect(result.messages?.[2]?.content).toBe(
+        'Yes, the sky is blue. It appears blue due to Rayleigh scattering.'
+      );
 
       // Should have assistant message with tool calls
-      const toolCallMessage = result.messages?.find(m => m.role === 'assistant' && m.tool_calls);
-      expect(toolCallMessage?.tool_calls).toBeDefined();
-      expect(toolCallMessage?.tool_calls?.length).toBe(1);
-      expect(toolCallMessage?.tool_calls?.[0]?.name).toBe('weather_tool');
-      expect(toolCallMessage?.tool_calls?.[0]?.arguments).toEqual({ location: 'sky', query: 'color' });
-      expect(toolCallMessage?.tool_calls?.[0]?.id).toBe('call-123');
+      expect(result.messages?.[3]?.role).toBe('assistant');
+      expect(result.messages?.[3]?.tool_calls).toBeDefined();
+      expect(result.messages?.[3]?.tool_calls?.length).toBe(1);
+      expect(result.messages?.[3]?.tool_calls?.[0]?.name).toBe('weather_tool');
+      expect(result.messages?.[3]?.tool_calls?.[0]?.arguments).toEqual({
+        location: 'sky',
+        query: 'color',
+      });
+      expect(result.messages?.[3]?.tool_calls?.[0]?.id).toBe('call-123');
     });
 
     it('should convert Vercel AI text generation response using inline data', async () => {
@@ -75,25 +82,25 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
                 properties: {
                   location: {
                     type: 'string',
-                    description: 'The location to get the weather for'
-                  }
-                }
-              }
-            }
-          }
-        }
+                    description: 'The location to get the weather for',
+                  },
+                },
+              },
+            },
+          },
+        },
       };
 
       // Create a mock async iterable for textStream
       const mockTextStream = (async function* () {
-        yield 'The sky often appears blue during the daytime because of the way Earth\'s atmosphere scatters sunlight. ';
+        yield "The sky often appears blue during the daytime because of the way Earth's atmosphere scatters sunlight. ";
         yield 'When sunlight enters the atmosphere, shorter wavelengths of light (blue and violet) are scattered more than longer wavelengths (red and yellow). ';
         yield 'Our eyes are more sensitive to blue light, so we see the sky as blue. ';
         yield 'However, the color of the sky can change based on weather, time of day, and other atmospheric conditions—for example, it might look orange or red at sunrise or sunset, or gray on a cloudy day.';
       })();
 
       const response = {
-        textStream: mockTextStream
+        textStream: mockTextStream,
       };
 
       const result = await converter.convertToQualifireEvaluationRequest(
@@ -105,26 +112,36 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
       expect(result.messages?.length).toBe(3);
 
       // Should have system message
-      const systemMessage = result.messages?.find(m => m.role === 'system');
-      expect(systemMessage?.content).toBe('You are a smart assistant that uses tools to answer questions');
+      expect(result.messages?.[0]?.role).toBe('system');
+      expect(result.messages?.[0]?.content).toBe(
+        'You are a smart assistant that uses tools to answer questions'
+      );
 
       // Should have user message
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage?.content).toBe('What is the weather in antartica');
+      expect(result.messages?.[1]?.role).toBe('user');
+      expect(result.messages?.[1]?.content).toBe(
+        'What is the weather in antartica'
+      );
 
       // Should have assistant message with accumulated stream content
-      const assistantMessage = result.messages?.find(m => m.role === 'assistant' && m.content);
-      expect(assistantMessage?.content).toBe(
-        'The sky often appears blue during the daytime because of the way Earth\'s atmosphere scatters sunlight. When sunlight enters the atmosphere, shorter wavelengths of light (blue and violet) are scattered more than longer wavelengths (red and yellow). Our eyes are more sensitive to blue light, so we see the sky as blue. However, the color of the sky can change based on weather, time of day, and other atmospheric conditions—for example, it might look orange or red at sunrise or sunset, or gray on a cloudy day.'
+      expect(result.messages?.[2]?.role).toBe('assistant');
+      expect(result.messages?.[2]?.content).toBe(
+        "The sky often appears blue during the daytime because of the way Earth's atmosphere scatters sunlight. When sunlight enters the atmosphere, shorter wavelengths of light (blue and violet) are scattered more than longer wavelengths (red and yellow). Our eyes are more sensitive to blue light, so we see the sky as blue. However, the color of the sky can change based on weather, time of day, and other atmospheric conditions—for example, it might look orange or red at sunrise or sunset, or gray on a cloudy day."
       );
 
       // Should have available tools
       expect(result.available_tools).toBeDefined();
       expect(result.available_tools?.length).toBe(1);
       expect(result.available_tools?.[0]?.name).toBe('weather');
-      expect(result.available_tools?.[0]?.description).toBe('Get the weather in a location');
-      expect(result.available_tools?.[0]?.parameters?.location?.type).toBe('string');
-      expect(result.available_tools?.[0]?.parameters?.location?.description).toBe('The location to get the weather for');
+      expect(result.available_tools?.[0]?.description).toBe(
+        'Get the weather in a location'
+      );
+      expect(result.available_tools?.[0]?.parameters?.location?.type).toBe(
+        'string'
+      );
+      expect(
+        result.available_tools?.[0]?.parameters?.location?.description
+      ).toBe('The location to get the weather for');
     });
   });
 });
