@@ -4,122 +4,150 @@ import {
   CanonicalEvaluationStrategy,
   convertResponseMessagesToLLMMessages,
 } from '../canonical';
+
 export class VercelAICanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy<any, any> {
   async convertToQualifireEvaluationRequest(
     request: any,
     response: any
   ): Promise<EvaluationRequest> {
-    const messages: LLMMessage[] = [];
+    let {
+      messages: requestMessages,
+      available_tools: requestAvailableTools,
+    } = await this.convertRequest(request);
 
-    let available_tools: LLMToolDefinition[] = [];
-    if (request.tools) {
-      available_tools = this.convertToolsToLLMDefinitions(request.tools);
-    }
+    const messages: LLMMessage[] = requestMessages || [];
+    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
 
-    // streamText response has a textStream property
-    if (response.textStream) {
-      if (request.system) {
-        messages.push({
-          role: 'system',
-          content: String(request.system),
-        });
-      }
-
-      if (request.prompt) {
-        messages.push({
-          role: 'user',
-          content: String(request.prompt),
-        });
-      } else if (request.messages) {
-        messages.push(
-          ...convertResponseMessagesToLLMMessages(request.messages)
-        );
-      }
-
-      const mergedContent = [];
-      for await (const textPart of response.textStream) {
-        mergedContent.push(textPart);
-      }
-
-      if (mergedContent.length > 0) {
-        messages.push({
-          role: 'assistant',
-          content: mergedContent.join(''),
-        });
-      }
-
-      // Once we know we have a stream text property we are in a streamText response and can check tool calls async.
-      if (response.toolCalls) {
-        const toolCalls = await response.toolCalls;
-        for (const toolCall of toolCalls) {
-          messages.push({
-            role: 'assistant',
-            tool_calls: [
-              {
-                name: toolCall.toolName,
-                arguments: toolCall.input,
-                id: toolCall.toolCallId,
-              },
-            ],
-          });
-        }
-      }
-
-      if (response.toolResults) {
-        const toolResults = await response.toolResults;
-        for (const toolResult of toolResults) {
-          messages.push({
-            role: 'tool',
-            tool_calls: [
-              {
-                name: toolResult.toolName,
-                arguments: toolResult.output,
-                id: toolResult.toolCallId,
-              },
-            ],
-          });
-        }
-      }
-
-      // generateText response
+    // Check if response is streaming (has textStream property)
+    if (response?.textStream) {
+      let streamingResultMessages = await this.handleStreaming(response);
+      messages.push(...streamingResultMessages);
     } else {
-      // generateText response has a text string property
-      if (response.text && typeof response.text === 'string') {
-        messages.push({
-          role: 'assistant',
-          content: String(response.text),
-        });
-      }
-
-      // generateText response is a string
-      if (response?.request?.body?.input) {
-        messages.push(
-          ...convertResponseMessagesToLLMMessages(
-            response?.request?.body?.input
-          )
-        );
-      }
-
-      // generateText response is a string
-      if (response?.response?.messages) {
-        messages.push(
-          ...convertResponseMessagesToLLMMessages(response.response.messages)
-        );
-      }
-
-      // for generateText
-      if (response.messages) {
-        messages.push(
-          ...convertResponseMessagesToLLMMessages(response.messages)
-        );
-      }
+      let nonStreamingResultMessages = await this.handleNonStreamingResponse(
+        response
+      );
+      messages.push(...nonStreamingResultMessages);
     }
 
     return {
-      messages: messages,
-      available_tools: available_tools,
+      messages,
+      available_tools,
     };
+  }
+
+  async convertRequest(request: any): Promise<EvaluationRequest> {
+    const messages: LLMMessage[] = [];
+    let available_tools: LLMToolDefinition[] = [];
+
+    // Handle system message
+    if (request?.system) {
+      messages.push({
+        role: 'system',
+        content: String(request.system),
+      });
+    }
+
+    // Handle prompt or messages
+    if (request?.prompt) {
+      messages.push({
+        role: 'user',
+        content: String(request.prompt),
+      });
+    } else if (request?.messages) {
+      messages.push(...convertResponseMessagesToLLMMessages(request.messages));
+    }
+
+    // Handle tools
+    if (request?.tools) {
+      available_tools = this.convertToolsToLLMDefinitions(request.tools);
+    }
+
+    return {
+      messages,
+      available_tools,
+    };
+  }
+
+  private async handleStreaming(response: any): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+
+    // Handle streaming text content
+    const mergedContent = [];
+    for await (const textPart of response.textStream) {
+      mergedContent.push(textPart);
+    }
+
+    if (mergedContent.length > 0) {
+      messages.push({
+        role: 'assistant',
+        content: mergedContent.join(''),
+      });
+    }
+
+    // Handle tool calls from streaming response
+    if (response.toolCalls) {
+      const toolCalls = await response.toolCalls;
+      for (const toolCall of toolCalls) {
+        messages.push({
+          role: 'assistant',
+          tool_calls: [
+            {
+              name: toolCall.toolName,
+              arguments: toolCall.input,
+              id: toolCall.toolCallId,
+            },
+          ],
+        });
+      }
+    }
+
+    // Handle tool results from streaming response
+    if (response.toolResults) {
+      const toolResults = await response.toolResults;
+      for (const toolResult of toolResults) {
+        messages.push({
+          role: 'tool',
+          tool_calls: [
+            {
+              name: toolResult.toolName,
+              arguments: toolResult.output,
+              id: toolResult.toolCallId,
+            },
+          ],
+        });
+      }
+    }
+
+    return messages;
+  }
+
+  private async handleNonStreamingResponse(
+    response: any
+  ): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+
+    // Handle generateText response (has text string property)
+    if (response.text && typeof response.text === 'string') {
+      messages.push({
+        role: 'assistant',
+        content: String(response.text),
+      });
+    }
+
+    // Handle response with messages
+    if (response?.response?.messages) {
+      messages.push(
+        ...convertResponseMessagesToLLMMessages(response.response.messages)
+      );
+    }
+
+    // Handle direct messages property
+    if (response.messages) {
+      messages.push(...convertResponseMessagesToLLMMessages(response.messages));
+    }
+
+    return messages;
   }
 
   private convertToolsToLLMDefinitions(

@@ -113,30 +113,28 @@ export function convertResponseMessagesToLLMMessages(
     for (const part of messageContents) {
       switch (message.type) {
         case 'message':
-          if (message.content) {
-            for (const contentElement of message.content) {
-              switch (contentElement.type) {
-                case 'output_text':
-                  role = 'tool' as const; // This is an output of a tool call so it's made by a tool.
-                  content.push(contentElement.text);
-                  break;
-                case 'text':
-                case 'input_text':
-                  content.push(contentElement.text);
-                  break;
-                default:
-                  throw new Error(
-                    'Invalid output: ' + JSON.stringify(contentElement)
-                  );
-              }
+          for (const contentElement of messageContents) {
+            switch (contentElement.type) {
+              case 'output_text':
+                role = 'tool' as const; // This is an output of a tool call so it's made by a tool.
+                content.push(contentElement.text);
+                break;
+              case 'text':
+              case 'input_text':
+                content.push(contentElement.text);
+                break;
+              default:
+                throw new Error(
+                  'Invalid output: ' + JSON.stringify(contentElement)
+                );
             }
-            if (content.length > 0) {
-              extracted_messages.push({
-                role,
-                content: content.join(' '),
-                tool_calls,
-              });
-            }
+          }
+          if (content.length > 0) {
+            extracted_messages.push({
+              role,
+              content: content.join(' '),
+              tool_calls,
+            });
           }
           break;
         // function calls based on https://platform.openai.com/docs/api-reference/responses/create
@@ -216,6 +214,45 @@ export function convertResponseMessagesToLLMMessages(
                 extracted_messages.push({
                   role: 'tool' as const,
                   content: JSON.stringify(part.content),
+                });
+                break;
+              //vercelai
+              case 'input_text':
+                extracted_messages.push({
+                  role: role,
+                  content: part.text,
+                });
+                break;
+              //vercelai
+              case 'tool-call':
+                extracted_messages.push({
+                  role: 'assistant' as const,
+                  tool_calls: [
+                    {
+                      name: part.toolName,
+                      arguments: part.input,
+                      id: part.toolCallId,
+                    },
+                  ],
+                });
+                break;
+              case 'tool-result':
+                extracted_messages.push({
+                  role: 'tool' as const,
+                  tool_calls: [
+                    {
+                      name: part.toolName,
+                      arguments: part.output?.value,
+                      id: part.toolCallId,
+                    },
+                  ],
+                });
+                break;
+              // vercelai streaming
+              case 'text':
+                extracted_messages.push({
+                  role: role,
+                  content: part.text,
                 });
                 break;
               default:
