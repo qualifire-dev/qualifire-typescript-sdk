@@ -5,16 +5,35 @@ import {
   convertToolsToLLMDefinitions,
 } from '../canonical';
 
-import type { GenerateTextResult, ToolSet } from 'ai';
+import type { GenerateTextResult, StreamTextResult, ToolSet } from 'ai';
+import { ChatCompletionCreateParamsNonStreaming, ChatCompletionCreateParamsStreaming } from 'openai/resources/chat/completions/completions';
+import { Completion } from 'openai/resources/completions';
+import { ResponseCreateParamsBase } from 'openai/resources/responses/responses';
+
+
+/*
+create(body: CompletionCreateParamsNonStreaming, options?: Core.RequestOptions): APIPromise<Completion>;
+    create(body: CompletionCreateParamsStreaming, options?: Core.RequestOptions): APIPromise<Stream<Completion>>;
+    create(body: CompletionCreateParamsBase, options?: Core.RequestOptions): APIPromise<Stream<Completion> | Completion>;
+*/
+
+// type OpenAICanonicalEvaluationStrategyRequest = ChatCompletionCreateParamsNonStreaming | ChatCompletionCreateParamsStreaming | ResponseCreateParamsBase;
+// type OpenAICanonicalEvaluationStrategyResponse = GenerateTextResult<ToolSet, any> | StreamTextResult<ToolSet, any> | Completion;
+
+// TOOD - remove temp
+type OpenAICanonicalEvaluationStrategyRequest = any;
+type OpenAICanonicalEvaluationStrategyResponse = any;
 
 export class OpenAICanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy<any, GenerateTextResult<ToolSet, any>> {
+  implements CanonicalEvaluationStrategy<OpenAICanonicalEvaluationStrategyRequest, OpenAICanonicalEvaluationStrategyResponse> {
   async convertToQualifireEvaluationRequest(
-    request: any,
-    response: GenerateTextResult<ToolSet, any>
+    request: OpenAICanonicalEvaluationStrategyRequest,
+    response: OpenAICanonicalEvaluationStrategyResponse
   ): Promise<EvaluationRequest> {
     const messages: LLMMessage[] = [];
 
+    // response api
+    // chat completions api
     if (request?.instructions) {
       messages.push({
         role: 'system',

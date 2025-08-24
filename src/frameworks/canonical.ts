@@ -6,8 +6,8 @@ import {
 } from '../types';
 
 export interface CanonicalEvaluationStrategy<
-  RequestType = any,
-  ResponseType = any
+  RequestType,
+  ResponseType
 > {
   convertToQualifireEvaluationRequest(
     request: RequestType,

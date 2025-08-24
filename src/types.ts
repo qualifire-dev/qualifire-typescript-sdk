@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Framework type based on supported frameworks
 const FrameworkEnum = ['openai', 'vercelai', 'gemini', 'claude'] as const;
-export type Framework = (typeof FrameworkEnum)[number];
+export type Framework = typeof FrameworkEnum[number];
 
 export const messageSchema = z.object({
   role: z.string(),
@@ -85,7 +85,7 @@ export const EvaluationRequestModernSchema = z.object({
   syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
   toolSelectionQualityCheck: z.boolean().default(false).optional(),
   assertions: z.array(z.string()).optional(),
-  // Deprecated snake_case parameters (for backward compatibility)
+  /** @deprecated Automatically added from the request*/
   available_tools: z.array(LLMToolDefinitionSchema).optional(),
   /** @deprecated Use dangerousContentCheck instead */
   dangerous_content_check: z.boolean().default(false).optional(),
