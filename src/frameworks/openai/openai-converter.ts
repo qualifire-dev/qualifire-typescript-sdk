@@ -1,9 +1,9 @@
+import { EvaluationRequest, LLMMessage, LLMToolDefinition } from '../../types';
 import {
-  EvaluationRequest,
-  LLMMessage,
-  LLMToolDefinition
-} from '../../types';
-import { CanonicalEvaluationStrategy, convertResponseMessagesToLLMMessages, convertToolsToLLMDefinitions } from '../canonical';
+  CanonicalEvaluationStrategy,
+  convertResponseMessagesToLLMMessages,
+  convertToolsToLLMDefinitions,
+} from '../canonical';
 
 export class OpenAICanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
@@ -11,11 +11,11 @@ export class OpenAICanonicalEvaluationStrategy
     request: any,
     response: any
   ): Promise<EvaluationRequest> {
-    let messages: LLMMessage[] = [];
-    
+    const messages: LLMMessage[] = [];
+
     if (request?.instructions) {
       messages.push({
-        role: "system",
+        role: 'system',
         content: request.instructions,
       });
     }
@@ -23,7 +23,7 @@ export class OpenAICanonicalEvaluationStrategy
     if (request?.input) {
       if (typeof request.input === 'string') {
         messages.push({
-          role: "user",
+          role: 'user',
           content: request.input,
         });
       } else {
@@ -34,12 +34,12 @@ export class OpenAICanonicalEvaluationStrategy
     if (request?.messages) {
       for (const message of request.messages) {
         if (message.role && message.content) {
-        messages.push({
+          messages.push({
             role: message.role,
             content: message.content,
           });
         } else {
-          throw new Error("Invalid request: " + JSON.stringify(message));
+          throw new Error('Invalid request: ' + JSON.stringify(message));
         }
       }
     }
@@ -48,23 +48,25 @@ export class OpenAICanonicalEvaluationStrategy
     if (response?.choices) {
       for (const choice of response.choices) {
         if (choice.message?.role) {
-          let message: LLMMessage = {
+          const message: LLMMessage = {
             role: choice.message.role,
-          }
+          };
           if (choice.message?.content) {
             message.content = choice.message.content;
           }
           if (choice.message?.tool_calls) {
-            message.tool_calls = choice.message.tool_calls.map((tool_call: any) => ({
-              name: tool_call.function.name,
-              arguments: JSON.parse(tool_call.function.arguments),
-              id: tool_call.id,
-            }));
+            message.tool_calls = choice.message.tool_calls.map(
+              (tool_call: any) => ({
+                name: tool_call.function.name,
+                arguments: JSON.parse(tool_call.function.arguments),
+                id: tool_call.id,
+              })
+            );
           }
           if (message.content || message.tool_calls) {
-            messages.push(message); 
+            messages.push(message);
           } else {
-            throw new Error("Invalid response: " + JSON.stringify(choice));
+            throw new Error('Invalid response: ' + JSON.stringify(choice));
           }
         }
       }
@@ -73,15 +75,19 @@ export class OpenAICanonicalEvaluationStrategy
     //response api
     if (response.output) {
       messages.push(...convertResponseMessagesToLLMMessages(response.output));
-    } else if (response.sequence_number && response.type == 'response.completed') {
+    } else if (
+      response.sequence_number &&
+      response.type == 'response.completed'
+    ) {
       // For streaming responses
       if (response.response?.output) {
-        messages.push(...convertResponseMessagesToLLMMessages(response.response.output));
+        messages.push(
+          ...convertResponseMessagesToLLMMessages(response.response.output)
+        );
       } else {
-        throw new Error("Invalid response: " + JSON.stringify(response));
+        throw new Error('Invalid response: ' + JSON.stringify(response));
       }
     }
-    
 
     let available_tools: LLMToolDefinition[] = [];
     if (request?.tools) {
@@ -94,6 +100,3 @@ export class OpenAICanonicalEvaluationStrategy
     };
   }
 }
-
-
-

@@ -12,9 +12,9 @@ export class GeminiAICanonicalEvaluationStrategy
     request: any,
     response: any
   ): Promise<EvaluationRequest> {
-    let messages: LLMMessage[] = [];
-    let available_tools: LLMToolDefinition[] = [];
-    
+    const messages: LLMMessage[] = [];
+    const available_tools: LLMToolDefinition[] = [];
+
     // Handle available tools
     if (request?.config?.tools && request.config.tools.length > 0) {
       for (const tool of request.config.tools) {
@@ -54,7 +54,10 @@ export class GeminiAICanonicalEvaluationStrategy
       for (const candidate of response.candidates) {
         if (candidate.content?.role && candidate.content?.parts) {
           for (const part of candidate.content.parts) {
-            const message = convertPartToLLMMessage(part, candidate.content.role);
+            const message = convertPartToLLMMessage(
+              part,
+              candidate.content.role
+            );
             if (message) {
               messages.push(message);
             }
@@ -71,7 +74,10 @@ export class GeminiAICanonicalEvaluationStrategy
 }
 
 // Helper function to convert a Gemini part to LLMMessage
-function convertPartToLLMMessage(part: any, defaultRole: string): LLMMessage | null {
+function convertPartToLLMMessage(
+  part: any,
+  defaultRole: string
+): LLMMessage | null {
   let role = defaultRole;
   let content: string | undefined;
   let tool_calls: LLMToolCall[] = [];
@@ -83,24 +89,26 @@ function convertPartToLLMMessage(part: any, defaultRole: string): LLMMessage | n
     role = role === 'model' ? 'assistant' : role;
     content = part.text;
   }
-  
+
   if (part.functionCall) {
     validMessage = true;
     // Handle function call parts
     role = 'assistant';
-    tool_calls = [{
-      name: part.functionCall.name,
-      arguments: part.functionCall.args,
-      id: `gemini_${Date.now()}_${Math.random()}`, // Generate unique ID
-    }];
+    tool_calls = [
+      {
+        name: part.functionCall.name,
+        arguments: part.functionCall.args,
+        id: `gemini_${Date.now()}_${Math.random()}`, // Generate unique ID
+      },
+    ];
   }
-  
+
   if (part.functionResponse) {
     validMessage = true;
     role = 'tool';
     content = JSON.stringify(part.functionResponse.response?.result);
   }
-  
+
   if (part.thoughtSignature) {
     // Handle thought signature parts (internal reasoning)
     // These are typically not meant for end users, so we can skip them

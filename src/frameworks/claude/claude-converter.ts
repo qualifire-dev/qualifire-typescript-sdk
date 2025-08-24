@@ -1,9 +1,8 @@
+import { EvaluationRequest, LLMMessage, LLMToolDefinition } from '../../types';
 import {
-  EvaluationRequest,
-  LLMMessage,
-  LLMToolDefinition
-} from '../../types';
-import { CanonicalEvaluationStrategy, convertResponseMessagesToLLMMessages } from '../canonical';
+  CanonicalEvaluationStrategy,
+  convertResponseMessagesToLLMMessages,
+} from '../canonical';
 
 export class ClaudeCanonicalEvaluationStrategy
   implements CanonicalEvaluationStrategy {
@@ -11,9 +10,9 @@ export class ClaudeCanonicalEvaluationStrategy
     request: any,
     response: any
   ): Promise<EvaluationRequest> {
-    let messages: LLMMessage[] = [];
-    let availableTools: LLMToolDefinition[] = [];
-    
+    const messages: LLMMessage[] = [];
+    const availableTools: LLMToolDefinition[] = [];
+
     // Handle Claude system message first (if present)
     if (request?.system) {
       messages.push({
@@ -21,7 +20,7 @@ export class ClaudeCanonicalEvaluationStrategy
         content: request.system,
       });
     }
-    
+
     if (request?.tools) {
       for (const tool of request.tools) {
         availableTools.push({
@@ -40,26 +39,31 @@ export class ClaudeCanonicalEvaluationStrategy
     // Checking if streaming response
     if (this.isClaudeStreamingChunk(response)) {
       if (response.type === 'message_start' && response.message) {
-        messages.push(...convertResponseMessagesToLLMMessages([response.message]));
+        messages.push(
+          ...convertResponseMessagesToLLMMessages([response.message])
+        );
       }
     } else {
       messages.push(...convertResponseMessagesToLLMMessages([response]));
     }
-    
-  return {
-    messages,
-    available_tools: availableTools,
-  };
-}
+
+    return {
+      messages,
+      available_tools: availableTools,
+    };
+  }
 
   private isClaudeStreamingChunk(response: any): boolean {
-    return response?.type && [
-      'message_start',
-      'content_block_start', 
-      'content_block_delta',
-      'content_block_stop',
-      'message_delta',
-      'message_stop'
-    ].includes(response.type);
+    return (
+      response?.type &&
+      [
+        'message_start',
+        'content_block_start',
+        'content_block_delta',
+        'content_block_stop',
+        'message_delta',
+        'message_stop',
+      ].includes(response.type)
+    );
   }
 }
