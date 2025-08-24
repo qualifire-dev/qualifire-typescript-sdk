@@ -20,10 +20,14 @@ export class GeminiAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = requestMessages || [];
     const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
 
-    // Check if response is streaming (has candidates array)
-    if (response?.candidates) {
-      let responseMessages = await this.handleResponse(response);
-      messages.push(...responseMessages);
+    if (Array.isArray(response)) {
+      let streamingResultMessages = await this.handleStreaming(response);
+      messages.push(...streamingResultMessages);
+    } else {
+      let nonStreamingResultMessages = await this.handleNonStreamingResponse(
+        response
+      );
+      messages.push(...nonStreamingResultMessages);
     }
 
     return {
@@ -74,11 +78,6 @@ export class GeminiAICanonicalEvaluationStrategy
   private async handleResponse(response: any): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    // VertexAI response contains a response inside the response object.
-    if (response?.response?.candidates) {
-      response = response.response;
-    }
-
     // Handle response candidates
     if (response?.candidates) {
       for (const candidate of response.candidates) {
@@ -97,6 +96,74 @@ export class GeminiAICanonicalEvaluationStrategy
     }
 
     return messages;
+  }
+
+  private async handleStreaming(response: any[]): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+    let accumulatedText = '';
+    let currentRole = '';
+    let hasFinishReason = false;
+
+    for (const chunk of response) {
+      if (chunk?.candidates && chunk.candidates.length > 0) {
+        const candidate = chunk.candidates[0];
+
+        // Check if role has changed
+        if (candidate.content?.role && candidate.content.role !== currentRole) {
+          // If we have accumulated text and role changed, create a message
+          if (accumulatedText && currentRole) {
+            const role = currentRole === 'model' ? 'assistant' : currentRole;
+            messages.push({
+              role,
+              content: accumulatedText.trim(),
+            });
+          }
+          // Reset for new role
+          accumulatedText = '';
+          currentRole = candidate.content.role;
+        }
+
+        // Check for finish reason
+        if (candidate.finishReason) {
+          hasFinishReason = true;
+        }
+
+        // Accumulate text from parts
+        if (candidate.content?.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.text) {
+              accumulatedText += part.text;
+            }
+          }
+        }
+      }
+    }
+
+    // Add final accumulated message if we have content and no finish reason, or if we have finish reason
+    if (
+      accumulatedText &&
+      currentRole &&
+      (hasFinishReason || !hasFinishReason)
+    ) {
+      const role = currentRole === 'model' ? 'assistant' : currentRole;
+      messages.push({
+        role,
+        content: accumulatedText.trim(),
+      });
+    }
+
+    return messages;
+  }
+
+  private async handleNonStreamingResponse(
+    response: any
+  ): Promise<LLMMessage[]> {
+    // // Handle nested response structure (VertexAI format)
+    // if (response?.response?.candidates) {
+    //   return this.handleResponse(response.response);
+    // }
+    // Handle direct candidates structure
+    return this.handleResponse(response);
   }
 }
 

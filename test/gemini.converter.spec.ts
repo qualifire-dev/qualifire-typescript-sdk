@@ -7,69 +7,15 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
     converter = new GeminiAICanonicalEvaluationStrategy();
   });
 
-  describe('VertexAI response', () => {
-    it('should convert VertexAI Gemini response', async () => {
-      const request = {
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              { text: 'How can I learn more about Node.js?' }
-            ]
-          }
-        ]
-      };
-
-      // Mock VertexAI response
-      const response = {
-        response: {
-          candidates: [
-            {
-              content: {
-                role: 'model',
-                parts: [
-                  { 
-                    text: 'Node.js is a JavaScript runtime built on Chrome\'s V8 JavaScript engine. It allows you to run JavaScript on the server side. To learn more about Node.js, you can start with the official documentation, take online courses, or practice building simple applications. Node.js is great for building web servers, APIs, and real-time applications.' 
-                  }
-                ],
-              },
-            },
-          ],
-        },
-      };
-
-      const result = await converter.convertToQualifireEvaluationRequest(
-        request,
-        response
-      );
-
-      expect(result.messages).toBeDefined();
-      expect(result.messages?.length).toBe(2); // user and assistant
-
-      // Should have user message
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage).toBeDefined();
-      expect(userMessage?.content).toBe('How can I learn more about Node.js?');
-
-      // Should have assistant message from model
-      const assistantMessage = result.messages?.find(m => m.role === 'assistant');
-      expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toBeTruthy();
-      expect(assistantMessage?.content).toContain('Node.js'); // Response should mention Node.js
-      expect(assistantMessage?.content).toContain('JavaScript'); // Response content
-      expect(assistantMessage?.content?.length).toBeGreaterThan(100); // Should be a substantial response
-    });
-  });
-
   describe('Gemini request handling', () => {
     it('should handle string request', async () => {
       const request = {
         contents: [
           {
             role: 'user',
-            parts: [{ text: 'What is JavaScript?' }]
-          }
-        ]
+            parts: [{ text: 'What is JavaScript?' }],
+          },
+        ],
       };
       const response = {
         candidates: [
@@ -92,7 +38,9 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       const userMessage = result.messages?.find(m => m.role === 'user');
       expect(userMessage?.content).toBe('What is JavaScript?');
 
-      const assistantMessage = result.messages?.find(m => m.role === 'assistant');
+      const assistantMessage = result.messages?.find(
+        m => m.role === 'assistant'
+      );
       expect(assistantMessage?.content).toBe(
         'JavaScript is a programming language.'
       );
@@ -103,9 +51,9 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         contents: [
           {
             role: 'user',
-            parts: [{ text: 'Explain async/await' }]
-          }
-        ]
+            parts: [{ text: 'Explain async/await' }],
+          },
+        ],
       };
 
       const response = {
@@ -151,7 +99,9 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       );
 
       expect(result.messages?.length).toBe(1); // Only assistant message
-      const assistantMessage = result.messages?.find(m => m.role === 'assistant');
+      const assistantMessage = result.messages?.find(
+        m => m.role === 'assistant'
+      );
       expect(assistantMessage?.content).toBe('Response text');
     });
   });
@@ -162,9 +112,9 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         contents: [
           {
             role: 'user',
-            parts: [{ text: 'Test question' }]
-          }
-        ]
+            parts: [{ text: 'Test question' }],
+          },
+        ],
       };
       const response = {
         candidates: [
@@ -191,46 +141,14 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
       expect(assistantMessages?.[1].content).toBe('Second part');
     });
 
-    it('should handle nested response.response structure', async () => {
-      const request = {
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: 'Test question' }]
-          }
-        ]
-      };
-      const response = {
-        response: {
-          candidates: [
-            {
-              content: {
-                role: 'model',
-                parts: [{ text: 'Nested response' }],
-              },
-            },
-          ],
-        },
-      };
-
-      const result = await converter.convertToQualifireEvaluationRequest(
-        request,
-        response
-      );
-
-      expect(result.messages?.length).toBe(2);
-      const assistantMessage = result.messages?.find(m => m.role === 'assistant');
-      expect(assistantMessage?.content).toBe('Nested response');
-    });
-
     it('should handle multiple candidates', async () => {
       const request = {
         contents: [
           {
             role: 'user',
-            parts: [{ text: 'Test question' }]
-          }
-        ]
+            parts: [{ text: 'Test question' }],
+          },
+        ],
       };
       const response = {
         candidates: [
@@ -249,7 +167,7 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         ],
       };
 
-      const result = await  converter.convertToQualifireEvaluationRequest(
+      const result = await converter.convertToQualifireEvaluationRequest(
         request,
         response
       );
@@ -270,9 +188,9 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         contents: [
           {
             role: 'user',
-            parts: [{ text: 'Test question' }]
-          }
-        ]
+            parts: [{ text: 'Test question' }],
+          },
+        ],
       };
       const response = { candidates: [] };
 
@@ -288,9 +206,9 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         contents: [
           {
             role: 'user',
-            parts: [{ text: 'Test question' }]
-          }
-        ]
+            parts: [{ text: 'Test question' }],
+          },
+        ],
       };
       const response = { someOtherProperty: 'value' };
 
@@ -306,9 +224,9 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         contents: [
           {
             role: 'user',
-            parts: [{ text: 'Test question' }]
-          }
-        ]
+            parts: [{ text: 'Test question' }],
+          },
+        ],
       };
       const response = {
         candidates: [
@@ -326,6 +244,145 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
       expect(result.messages?.length).toBe(1); // Only user message
+    });
+  });
+
+  describe('streaming response', () => {
+    it('should accumulate streaming chunks correctly', async () => {
+      const request = {
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: 'Schedule a meeting' }],
+          },
+        ],
+      };
+
+      // Mock streaming response chunks
+      const response = [
+        {
+          candidates: [
+            {
+              content: {
+                parts: [{ text: 'The meeting has been scheduled with' }],
+                role: 'model',
+              },
+            },
+          ],
+          createTime: '2025-08-24T16:24:26.180768Z',
+          modelVersion: 'gemini-2.5-flash',
+          responseId: 'ujyraKCEC46cmecPqJHW6Qo',
+          usageMetadata: { trafficType: 'ON_DEMAND' },
+        },
+        {
+          candidates: [
+            {
+              content: {
+                parts: [{ text: ' Bob and Alice for March 27, 2025, at 10:0' }],
+                role: 'model',
+              },
+            },
+          ],
+          createTime: '2025-08-24T16:24:26.180768Z',
+          modelVersion: 'gemini-2.5-flash',
+          responseId: 'ujyraKCEC46cmecPqJHW6Qo',
+          usageMetadata: { trafficType: 'ON_DEMAND' },
+        },
+        {
+          candidates: [
+            {
+              content: {
+                parts: [{ text: '0 AM to discuss Q3 planning.' }],
+                role: 'model',
+              },
+              finishReason: 'STOP',
+            },
+          ],
+          createTime: '2025-08-24T16:24:26.180768Z',
+          modelVersion: 'gemini-2.5-flash',
+          responseId: 'ujyraKCEC46cmecPqJHW6Qo',
+          usageMetadata: {
+            promptTokenCount: 322,
+            candidatesTokenCount: 35,
+            totalTokenCount: 357,
+            trafficType: 'ON_DEMAND',
+          },
+        },
+      ];
+
+      const result = await converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      expect(result.messages).toBeDefined();
+      expect(result.messages?.length).toBe(2); // user and assistant
+
+      // Should have user message
+      const userMessage = result.messages?.find(m => m.role === 'user');
+      expect(userMessage).toBeDefined();
+      expect(userMessage?.content).toBe('Schedule a meeting');
+
+      // Should have assistant message with accumulated content
+      const assistantMessage = result.messages?.find(
+        m => m.role === 'assistant'
+      );
+      expect(assistantMessage).toBeDefined();
+      expect(assistantMessage?.content).toBe(
+        'The meeting has been scheduled with Bob and Alice for March 27, 2025, at 10:00 AM to discuss Q3 planning.'
+      );
+    });
+
+    it('should handle role changes in streaming chunks', async () => {
+      const request = {
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: 'Ask a question' }],
+          },
+        ],
+      };
+
+      // Mock streaming response with role change
+      const response = [
+        {
+          candidates: [
+            {
+              content: {
+                parts: [{ text: 'First response from model' }],
+                role: 'model',
+              },
+            },
+          ],
+        },
+        {
+          candidates: [
+            {
+              content: {
+                parts: [{ text: 'Second response from user' }],
+                role: 'user',
+              },
+            },
+          ],
+        },
+      ];
+
+      const result = await converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      expect(result.messages?.length).toBe(3); // user request + model response + user response
+
+      const assistantMessage = result.messages?.find(
+        m => m.role === 'assistant'
+      );
+      expect(assistantMessage?.content).toBe('First response from model');
+
+      const userResponseMessage = result.messages?.find(
+        m => m.role === 'user' && m.content === 'Second response from user'
+      );
+      expect(userResponseMessage).toBeDefined();
     });
   });
 });
