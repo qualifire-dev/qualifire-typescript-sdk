@@ -101,8 +101,9 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         m => m.role === 'assistant'
       );
       expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toBeTruthy();
-      expect(assistantMessage?.content).toContain('terrible prompt'); // Content from the response
+      expect(assistantMessage?.content).toContain(
+        'Here is a terrible prompt to evaluate if sp500 '
+      ); // Content from the response
     });
   });
 
@@ -116,6 +117,42 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
           {
             role: 'user' as const,
             content: 'Hello, how are you?',
+          },
+        ],
+        tools: [
+          {
+            name: 'get_weather',
+            description: 'Get the current weather for a location',
+            input_schema: {
+              properties: {
+                location: {
+                  type: 'string',
+                  description: 'The city and state, e.g. San Francisco, CA',
+                },
+                unit: {
+                  type: 'string',
+                  enum: ['celsius', 'fahrenheit'],
+                },
+              },
+              required: ['location'],
+            },
+          },
+          {
+            name: 'calculate_tip',
+            description: 'Calculate tip amount for a bill',
+            input_schema: {
+              properties: {
+                bill_amount: {
+                  type: 'number',
+                  description: 'The bill amount',
+                },
+                tip_percentage: {
+                  type: 'number',
+                  description: 'The tip percentage (e.g., 15 for 15%)',
+                },
+              },
+              required: ['bill_amount', 'tip_percentage'],
+            },
           },
         ],
       };
@@ -139,22 +176,55 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
       );
 
       expect(result.messages).toBeDefined();
+      expect(result.messages?.[0]?.role).toBe('system');
+      expect(result.messages?.[0]?.content).toBe(
+        'You are a helpful assistant.'
+      );
+
+      expect(result.messages?.[1]?.role).toBe('user');
+      expect(result.messages?.[1]?.content).toBe('Hello, how are you?');
+
+      expect(result.messages?.[2]?.role).toBe('assistant');
+      expect(result.messages?.[2]?.content).toBe(
+        'Hello! I am doing well, thank you for asking. How can I help you today?'
+      );
       expect(result.messages?.length).toBe(3); // system, user, assistant
 
-      // Should have system message
-      const systemMessage = result.messages?.find(m => m.role === 'system');
-      expect(systemMessage).toBeDefined();
+      // Verify tools are properly included
+      expect(result.available_tools).toBeDefined();
 
-      // Should have user message
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage).toBeDefined();
+      // Verify first tool (get_weather)
+      expect(result.available_tools?.[0]).toEqual({
+        name: 'get_weather',
+        description: 'Get the current weather for a location',
+        parameters: {
+          location: {
+            type: 'string',
+            description: 'The city and state, e.g. San Francisco, CA',
+          },
+          unit: {
+            type: 'string',
+            enum: ['celsius', 'fahrenheit'],
+          },
+        },
+      });
 
-      // Should have assistant message
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toBeTruthy();
+      // Verify second tool (calculate_tip)
+      expect(result.available_tools?.[1]).toEqual({
+        name: 'calculate_tip',
+        description: 'Calculate tip amount for a bill',
+        parameters: {
+          bill_amount: {
+            type: 'number',
+            description: 'The bill amount',
+          },
+          tip_percentage: {
+            type: 'number',
+            description: 'The tip percentage (e.g., 15 for 15%)',
+          },
+        },
+      });
+      expect(result.available_tools).toHaveLength(2);
     });
   });
 

@@ -25,9 +25,10 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         choices: [
           {
             index: 0,
-            message: { 
-              role: 'assistant', 
-              content: 'Arrr matey! In JavaScript, semicolons be optional in most cases, but it be good practice to use them for clarity and to avoid potential issues with automatic semicolon insertion.' 
+            message: {
+              role: 'assistant',
+              content:
+                'Arrr matey! In JavaScript, semicolons be optional in most cases, but it be good practice to use them for clarity and to avoid potential issues with automatic semicolon insertion.',
             },
             finish_reason: 'stop',
           },
@@ -59,9 +60,9 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         m => m.role === 'assistant'
       );
       expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toBeTruthy();
-      expect(assistantMessage?.content).toContain('Arrr'); // Pirate language
-      expect(assistantMessage?.content).toContain('semicolons'); // Response content
+      expect(assistantMessage?.content).toContain(
+        'Arrr matey! In JavaScript, semicolons be optional in most cases, but it be good practice to use them for clarity and to avoid potential issues with automatic semicolon insertion.'
+      );
     });
   });
 
@@ -79,7 +80,11 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
             type: 'message',
             role: 'assistant',
             content: [
-              { type: 'text', text: 'Once upon a moonlit night, a gentle unicorn with a silver mane danced through a starlit meadow, spreading magic and wonder to all who dreamed.' },
+              {
+                type: 'text',
+                text:
+                  'Once upon a moonlit night, a gentle unicorn with a silver mane danced through a starlit meadow, spreading magic and wonder to all who dreamed.',
+              },
             ],
           },
         ],
