@@ -102,7 +102,6 @@ export class GeminiAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = [];
     let accumulatedText = '';
     let currentRole = '';
-    let hasFinishReason = false;
 
     for (const chunk of response) {
       if (chunk?.candidates && chunk.candidates.length > 0) {
@@ -123,11 +122,6 @@ export class GeminiAICanonicalEvaluationStrategy
           currentRole = candidate.content.role;
         }
 
-        // Check for finish reason
-        if (candidate.finishReason) {
-          hasFinishReason = true;
-        }
-
         // Accumulate text from parts
         if (candidate.content?.parts) {
           for (const part of candidate.content.parts) {
@@ -139,12 +133,8 @@ export class GeminiAICanonicalEvaluationStrategy
       }
     }
 
-    // Add final accumulated message if we have content and no finish reason, or if we have finish reason
-    if (
-      accumulatedText &&
-      currentRole &&
-      (hasFinishReason || !hasFinishReason)
-    ) {
+    // Add final accumulated message if we have content
+    if (accumulatedText && currentRole) {
       const role = currentRole === 'model' ? 'assistant' : currentRole;
       messages.push({
         role,
