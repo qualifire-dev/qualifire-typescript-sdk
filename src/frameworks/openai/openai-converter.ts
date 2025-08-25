@@ -27,14 +27,43 @@ export class OpenAICanonicalEvaluationStrategy
       OpenAICanonicalEvaluationStrategyRequest,
       OpenAICanonicalEvaluationStrategyResponse
     > {
-  async convertRequest(
+  async convertRequestForChatCompletions(
+    request: OpenAICanonicalEvaluationStrategyRequest
+  ): Promise<EvaluationRequestV1> {
+    const messages: LLMMessage[] = [];
+    let available_tools: LLMToolDefinition[] = [];
+
+    // chat completions api
+    if (request?.messages) {
+      for (const message of request.messages) {
+        if (message.role && message.content) {
+          messages.push({
+            role: message.role,
+            content: message.content,
+          });
+        } else {
+          throw new Error('Invalid request: ' + JSON.stringify(message));
+        }
+      }
+    }
+
+    if (request?.tools) {
+      available_tools = convertToolsToLLMDefinitions(request?.tools);
+    }
+
+    return {
+      messages,
+      available_tools,
+    };
+  }
+
+  async convertRequestForResponse(
     request: OpenAICanonicalEvaluationStrategyRequest
   ): Promise<EvaluationRequestV1> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 
     // response api
-    // chat completions api
     if (request?.instructions) {
       messages.push({
         role: 'system',
@@ -53,26 +82,38 @@ export class OpenAICanonicalEvaluationStrategy
       }
     }
 
-    if (request?.messages) {
-      for (const message of request.messages) {
-        if (message.role && message.content) {
-          messages.push({
-            role: message.role,
-            content: message.content,
-          });
-        } else {
-          throw new Error('Invalid request: ' + JSON.stringify(message));
-        }
-      }
-    }
-
     if (request?.tools) {
       available_tools = convertToolsToLLMDefinitions(request?.tools);
     }
+
     return {
       messages,
       available_tools,
     };
+  }
+
+  async convertRequest(
+    request: OpenAICanonicalEvaluationStrategyRequest
+  ): Promise<EvaluationRequestV1> {
+    // Determine which API is being used and call the appropriate method
+    if (request?.messages) {
+      return this.convertRequestForChatCompletions(request);
+    } else if (request?.instructions || request?.input) {
+      return this.convertRequestForResponse(request);
+    } else {
+      // Fallback to original logic if neither pattern matches
+      const messages: LLMMessage[] = [];
+      let available_tools: LLMToolDefinition[] = [];
+
+      if (request?.tools) {
+        available_tools = convertToolsToLLMDefinitions(request?.tools);
+      }
+
+      return {
+        messages,
+        available_tools,
+      };
+    }
   }
 
   async convertToQualifireEvaluationRequest(
