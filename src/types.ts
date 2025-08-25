@@ -191,10 +191,8 @@ const EvaluationResponseSchema = z.object({
   status: z.string(),
 });
 
-export type EvaluationRequest = z.input<typeof EvaluationRequestSchema>;
+export type EvaluationRequestV1 = z.input<typeof EvaluationRequestSchema>;
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
 export type LLMToolDefinition = z.infer<typeof LLMToolDefinitionSchema>;
 export type LLMToolCall = z.infer<typeof LLMToolCallSchema>;
-export type EvaluationModernRequest = z.infer<
-  typeof EvaluationRequestModernSchema
->;
+export type EvaluationRequestV2 = z.infer<typeof EvaluationRequestModernSchema>;

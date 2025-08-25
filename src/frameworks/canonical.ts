@@ -1,5 +1,5 @@
 import {
-  EvaluationRequest,
+  EvaluationRequestV1,
   LLMMessage,
   LLMToolCall,
   LLMToolDefinition,
@@ -9,7 +9,7 @@ export interface CanonicalEvaluationStrategy<RequestType, ResponseType> {
   convertToQualifireEvaluationRequest(
     request: RequestType,
     response: ResponseType
-  ): Promise<EvaluationRequest>;
+  ): Promise<EvaluationRequestV1>;
 }
 export function convertToolsToLLMDefinitions(
   tools: unknown[]

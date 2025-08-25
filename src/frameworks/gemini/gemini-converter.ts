@@ -1,5 +1,5 @@
 import {
-  EvaluationRequest,
+  EvaluationRequestV1,
   LLMMessage,
   LLMToolCall,
   LLMToolDefinition,
@@ -11,7 +11,7 @@ export class GeminiAICanonicalEvaluationStrategy
   async convertToQualifireEvaluationRequest(
     request: any,
     response: any
-  ): Promise<EvaluationRequest> {
+  ): Promise<EvaluationRequestV1> {
     let {
       messages: requestMessages,
       available_tools: requestAvailableTools,
@@ -36,7 +36,7 @@ export class GeminiAICanonicalEvaluationStrategy
     };
   }
 
-  async convertRequest(request: any): Promise<EvaluationRequest> {
+  async convertRequest(request: any): Promise<EvaluationRequestV1> {
     const messages: LLMMessage[] = [];
     const available_tools: LLMToolDefinition[] = [];
 

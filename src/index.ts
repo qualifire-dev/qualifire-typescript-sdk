@@ -3,11 +3,11 @@ import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-co
 import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
-import { EvaluationRequest, type EvaluationModernRequest, type EvaluationResponse, type Framework } from './types';
+import { EvaluationRequestV1, type EvaluationRequestV2, type EvaluationResponse, type Framework } from './types';
 
 export type {
-  EvaluationModernRequest,
-  EvaluationRequest,
+  EvaluationRequestV2,
+  EvaluationRequestV1,
   EvaluationResponse, Framework, LLMMessage
 } from './types';
 
@@ -65,7 +65,7 @@ export class Qualifire {
    * 
    * Note: If both `messages` and `request`/`response` are provided, `messages` takes precedence.
    *
-   * @param evaluationModernRequest - The evaluation request with either direct messages or framework-specific request/response
+   * @param EvaluationRequestV2 - The evaluation request with either direct messages or framework-specific request/response
    * @returns An object containing the evaluation results.
    *
    * @example
@@ -95,38 +95,38 @@ export class Qualifire {
    * });
    * ```
    */
-  evaluate = async (evaluationModernRequest: EvaluationModernRequest): Promise<EvaluationResponse | undefined> => {
+  evaluate = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
     // If messages are provided directly, use them as-is without conversion
-    if (evaluationModernRequest.messages && evaluationModernRequest.messages.length > 0) {
-      return this.evaluateWithBackwardCompatibility(evaluationModernRequest);
+    if (EvaluationRequestV2.messages && EvaluationRequestV2.messages.length > 0) {
+      return this.evaluateWithBackwardCompatibility(EvaluationRequestV2);
     }
 
     // Use framework converters for request/response
-    return this.evaluateWithConverters(evaluationModernRequest);
+    return this.evaluateWithConverters(EvaluationRequestV2);
   };
 
   /**
    * Evaluates using direct messages without conversion (overrides request/response if both are provided)
    */
-  private evaluateWithBackwardCompatibility = async (evaluationModernRequest: EvaluationModernRequest): Promise<EvaluationResponse | undefined> => {
+  private evaluateWithBackwardCompatibility = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {
-      input: evaluationModernRequest.input,
-      output: evaluationModernRequest.output,
-      messages: evaluationModernRequest.messages,
-      available_tools: evaluationModernRequest.available_tools,
-      dangerous_content_check: evaluationModernRequest.dangerous_content_check,
-      grounding_check: evaluationModernRequest.grounding_check ,
-      hallucinations_check: evaluationModernRequest.hallucinations_check,
-      harassment_check: evaluationModernRequest.harassment_check,
-      hate_speech_check: evaluationModernRequest.hate_speech_check,
-      instructions_following_check: evaluationModernRequest.instructions_following_check,
-      pii_check: evaluationModernRequest.pii_check,
-      prompt_injections: evaluationModernRequest.prompt_injections,
-      sexual_content_check: evaluationModernRequest.sexual_content_check,
-      syntax_checks: evaluationModernRequest.syntax_checks,
-      tool_selection_quality_check: evaluationModernRequest.tool_selection_quality_check,
-      assertions: evaluationModernRequest.assertions,
+      input: EvaluationRequestV2.input,
+      output: EvaluationRequestV2.output,
+      messages: EvaluationRequestV2.messages,
+      available_tools: EvaluationRequestV2.available_tools,
+      dangerous_content_check: EvaluationRequestV2.dangerous_content_check,
+      grounding_check: EvaluationRequestV2.grounding_check ,
+      hallucinations_check: EvaluationRequestV2.hallucinations_check,
+      harassment_check: EvaluationRequestV2.harassment_check,
+      hate_speech_check: EvaluationRequestV2.hate_speech_check,
+      instructions_following_check: EvaluationRequestV2.instructions_following_check,
+      pii_check: EvaluationRequestV2.pii_check,
+      prompt_injections: EvaluationRequestV2.prompt_injections,
+      sexual_content_check: EvaluationRequestV2.sexual_content_check,
+      syntax_checks: EvaluationRequestV2.syntax_checks,
+      tool_selection_quality_check: EvaluationRequestV2.tool_selection_quality_check,
+      assertions: EvaluationRequestV2.assertions,
     };
 
     const headers = {
@@ -151,7 +151,7 @@ export class Qualifire {
   /**
    * Evaluates using framework converters for request/response
    */
-  private evaluateWithConverters = async (evaluationModernRequest: EvaluationModernRequest): Promise<EvaluationResponse | undefined> => {
+  private evaluateWithConverters = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
     const frameworkConverters: Record<Framework, () => any> = {
       'openai': () => new OpenAICanonicalEvaluationStrategy(),
       'vercelai': () => new VercelAICanonicalEvaluationStrategy(),
@@ -160,33 +160,33 @@ export class Qualifire {
     };
 
     const supportedFrameworks = Object.keys(frameworkConverters);
-    const converterFactory = frameworkConverters[evaluationModernRequest.framework];
+    const converterFactory = frameworkConverters[EvaluationRequestV2.framework];
     
     if (!converterFactory) {
-      throw new Error(`Unsupported provider: ${evaluationModernRequest.framework}. Supported frameworks: ${supportedFrameworks.join(', ')}`);
+      throw new Error(`Unsupported framework: ${EvaluationRequestV2.framework}. Supported frameworks: ${supportedFrameworks.join(', ')}`);
     }
 
     const requestConverter = converterFactory();
 
     
-    let evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(evaluationModernRequest.request, evaluationModernRequest.response)
+    let evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(EvaluationRequestV2.request, EvaluationRequestV2.response)
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {
       messages: evaluationRequest.messages,
       available_tools: evaluationRequest.available_tools,
-      dangerous_content_check: evaluationModernRequest.dangerousContentCheck,
-      grounding_check: evaluationModernRequest.groundingCheck,
-      hallucinations_check: evaluationModernRequest.hallucinationsCheck,
-      harassment_check: evaluationModernRequest.harassmentCheck,
-      hate_speech_check: evaluationModernRequest.hateSpeechCheck,
-      instructions_following_check: evaluationModernRequest.instructionsFollowingCheck,
-      pii_check: evaluationModernRequest.piiCheck,
-      prompt_injections: evaluationModernRequest.promptInjections,
-      sexual_content_check: evaluationModernRequest.sexualContentCheck,
-      syntax_checks: evaluationModernRequest.syntaxChecks,
-      tool_selection_quality_check: evaluationModernRequest.toolSelectionQualityCheck,
-      assertions: evaluationModernRequest.assertions,
+      dangerous_content_check: EvaluationRequestV2.dangerousContentCheck,
+      grounding_check: EvaluationRequestV2.groundingCheck,
+      hallucinations_check: EvaluationRequestV2.hallucinationsCheck,
+      harassment_check: EvaluationRequestV2.harassmentCheck,
+      hate_speech_check: EvaluationRequestV2.hateSpeechCheck,
+      instructions_following_check: EvaluationRequestV2.instructionsFollowingCheck,
+      pii_check: EvaluationRequestV2.piiCheck,
+      prompt_injections: EvaluationRequestV2.promptInjections,
+      sexual_content_check: EvaluationRequestV2.sexualContentCheck,
+      syntax_checks: EvaluationRequestV2.syntaxChecks,
+      tool_selection_quality_check: EvaluationRequestV2.toolSelectionQualityCheck,
+      assertions: EvaluationRequestV2.assertions,
     };
 
     const headers = {

@@ -1,4 +1,8 @@
-import { EvaluationRequest, LLMMessage, LLMToolDefinition } from '../../types';
+import {
+  EvaluationRequestV1,
+  LLMMessage,
+  LLMToolDefinition,
+} from '../../types';
 import {
   CanonicalEvaluationStrategy,
   convertResponseMessagesToLLMMessages,
@@ -25,7 +29,7 @@ export class OpenAICanonicalEvaluationStrategy
     > {
   async convertRequest(
     request: OpenAICanonicalEvaluationStrategyRequest
-  ): Promise<EvaluationRequest> {
+  ): Promise<EvaluationRequestV1> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 
@@ -74,7 +78,7 @@ export class OpenAICanonicalEvaluationStrategy
   async convertToQualifireEvaluationRequest(
     request: OpenAICanonicalEvaluationStrategyRequest,
     response: OpenAICanonicalEvaluationStrategyResponse
-  ): Promise<EvaluationRequest> {
+  ): Promise<EvaluationRequestV1> {
     let {
       messages: requestMessages,
       available_tools: requestAvailableTools,
