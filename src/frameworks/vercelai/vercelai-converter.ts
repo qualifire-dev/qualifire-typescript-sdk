@@ -15,7 +15,7 @@ export class VercelAICanonicalEvaluationStrategy
     request: any,
     response: any
   ): Promise<EvaluationProxyAPIRequest> {
-    let {
+    const {
       messages: requestMessages,
       available_tools: requestAvailableTools,
     } = await this.convertRequest(request);
@@ -25,10 +25,10 @@ export class VercelAICanonicalEvaluationStrategy
 
     // Check if response is streaming (has textStream property)
     if (response?.textStream) {
-      let streamingResultMessages = await this.handleStreaming(response);
+      const streamingResultMessages = await this.handleStreaming(response);
       messages.push(...streamingResultMessages);
     } else {
-      let nonStreamingResultMessages = await this.handleNonStreamingResponse(
+      const nonStreamingResultMessages = await this.handleNonStreamingResponse(
         response
       );
       messages.push(...nonStreamingResultMessages);
@@ -78,7 +78,9 @@ export class VercelAICanonicalEvaluationStrategy
 
     // Handle streaming text content
     const mergedContent = [];
-    for await (const textPart of response.textStream) {
+
+    const textStreams = response.textStream.tee();
+    for await (const textPart of textStreams[0]) {
       mergedContent.push(textPart);
     }
 
@@ -131,11 +133,10 @@ export class VercelAICanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    // Handle generateText response (has text string property)
     if (response.text && typeof response.text === 'string') {
       messages.push({
         role: 'assistant',
-        content: String(response.text),
+        content: response.text,
       });
     }
 
