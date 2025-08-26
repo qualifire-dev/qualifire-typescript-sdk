@@ -44,10 +44,18 @@ export class OpenAICanonicalEvaluationStrategy
       const streamingResultMessages = await this.handleStreaming(response);
       messages.push(...streamingResultMessages);
     } else {
-      const nonStreamingResultMessages = await this.handleNonStreamingResponse(
-        response
-      );
-      messages.push(...nonStreamingResultMessages);
+      // Determine which API is being used and call the appropriate method
+      if (response?.choices) {
+        const chatCompletionsMessages = await this.handleChatCompletionsNonStreaming(
+          response
+        );
+        messages.push(...chatCompletionsMessages);
+      } else {
+        const responseApiMessages = await this.handleResponseApiNonStreaming(
+          response
+        );
+        messages.push(...responseApiMessages);
+      }
     }
 
     return {
@@ -394,55 +402,55 @@ export class OpenAICanonicalEvaluationStrategy
     return null;
   }
 
-  private async handleNonStreamingResponse(
+  private async handleChatCompletionsNonStreaming(
     response: OpenAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    // chat completions api
-    if (response?.choices) {
-      const firstChoice = response.choices[0];
-      if (firstChoice.message?.role) {
-        const message: LLMMessage = {
-          role: firstChoice.message.role,
-        };
-        if (firstChoice.message?.content) {
-          message.content = firstChoice.message.content;
-        }
-        if (firstChoice.message?.tool_calls) {
-          message.tool_calls = firstChoice.message.tool_calls.map(
-            (tool_call: any) => ({
-              name: tool_call.function.name,
-              arguments: tool_call.function.arguments
-                ? JSON.parse(tool_call.function.arguments)
-                : {},
-              id: tool_call.id,
-            })
-          );
-        }
-        if (message.content || message.tool_calls) {
-          messages.push(message);
-        } else {
-          throw new Error('Invalid response: ' + JSON.stringify(firstChoice));
-        }
+    if (!response?.choices) {
+      throw new Error('Invalid chat completions response: missing choices');
+    }
+
+    const firstChoice = response.choices[0];
+    if (firstChoice.message?.role) {
+      const message: LLMMessage = {
+        role: firstChoice.message.role,
+      };
+      if (firstChoice.message?.content) {
+        message.content = firstChoice.message.content;
+      }
+      if (firstChoice.message?.tool_calls) {
+        message.tool_calls = firstChoice.message.tool_calls.map(
+          (tool_call: any) => ({
+            name: tool_call.function.name,
+            arguments: tool_call.function.arguments
+              ? JSON.parse(tool_call.function.arguments)
+              : {},
+            id: tool_call.id,
+          })
+        );
+      }
+      if (message.content || message.tool_calls) {
+        messages.push(message);
+      } else {
+        throw new Error('Invalid response: ' + JSON.stringify(firstChoice));
       }
     }
 
-    //response api
+    return messages;
+  }
+
+  private async handleResponseApiNonStreaming(
+    response: OpenAICanonicalEvaluationStrategyResponse
+  ): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+
     if (response.output) {
       messages.push(...convertResponseMessagesToLLMMessages(response.output));
-    } else if (
-      response.sequence_number &&
-      response.type == 'response.completed'
-    ) {
-      // For streaming responses
-      if (response.response?.output) {
-        messages.push(
-          ...convertResponseMessagesToLLMMessages(response.response.output)
-        );
-      } else {
-        throw new Error('Invalid response: ' + JSON.stringify(response));
-      }
+    } else {
+      throw new Error(
+        'Invalid response API response: ' + JSON.stringify(response)
+      );
     }
 
     return messages;
