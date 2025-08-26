@@ -11,6 +11,10 @@ import {
 
 import type { GenerateTextResult, StreamTextResult, ToolSet } from 'ai';
 import {
+  ChatCompletion,
+  ChatCompletionChunk,
+} from 'openai/resources/chat/completions';
+import {
   ChatCompletionCreateParamsNonStreaming,
   ChatCompletionCreateParamsStreaming,
   ChatCompletionCreateParamsBase,
@@ -18,14 +22,15 @@ import {
 import { Completion } from 'openai/resources/completions';
 import {
   Response,
+  ResponseCreateParamsNonStreaming,
+  ResponseCreateParamsStreaming,
   ResponseCreateParamsBase,
   ResponseStreamEvent,
 } from 'openai/resources/responses/responses';
-import { Stream } from 'openai/core';
 
 type OpenAIChatCompletionsResponse =
   | ChatCompletion
-  | Stream<ChatCompletionChunk>;
+  | Array<ChatCompletionChunk>;
 
 type OpenAIResponseCreateRequest =
   | ResponseCreateParamsNonStreaming
@@ -34,7 +39,7 @@ type OpenAIResponseCreateRequest =
 
 type OpenAIResponseCreateRequestResponse =
   | Response
-  | Stream<ResponseStreamEvent>;
+  | Array<ResponseStreamEvent>;
 
 type OpenAIChatCompletionsCreateRequest =
   | ChatCompletionCreateParamsNonStreaming
@@ -43,10 +48,10 @@ type OpenAIChatCompletionsCreateRequest =
 
 type OpenAIChatCompletionsCreateResponse =
   | ChatCompletion
-  | Stream<ChatCompletionChunk>;
+  | Array<ChatCompletionChunk>;
 
 type OpenAICanonicalEvaluationStrategyRequest =
-  | OpenAIResponseCreateRequestParams
+  | OpenAIResponseCreateRequest
   | OpenAIChatCompletionsCreateRequest;
 
 type OpenAICanonicalEvaluationStrategyResponse =
@@ -63,6 +68,9 @@ export class OpenAICanonicalEvaluationStrategy
     request: OpenAICanonicalEvaluationStrategyRequest,
     response: OpenAICanonicalEvaluationStrategyResponse
   ): Promise<EvaluationProxyAPIRequest> {
+    request = request as OpenAIChatCompletionsCreateRequest;
+    response = response as OpenAIChatCompletionsCreateResponse;
+
     const {
       messages: requestMessages,
       available_tools: requestAvailableTools,
@@ -82,6 +90,7 @@ export class OpenAICanonicalEvaluationStrategy
         );
         messages.push(...chatCompletionsMessages);
       } else {
+        response = (response as unknown) as Response;
         const responseApiMessages = await this.handleResponseApiNonStreaming(
           response
         );
@@ -95,11 +104,9 @@ export class OpenAICanonicalEvaluationStrategy
     };
   }
 
-  async convertRequest(
-    request: OpenAICanonicalEvaluationStrategyRequest
-  ): Promise<EvaluationProxyAPIRequest> {
+  async convertRequest(request: any): Promise<EvaluationProxyAPIRequest> {
     // Determine which API is being used and call the appropriate method
-    if (request?.messages) {
+    if (request.messages) {
       return this.convertRequestForChatCompletions(request);
     } else if (request?.instructions || request?.input) {
       return this.convertRequestForResponse(request);
@@ -109,7 +116,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   async convertRequestForChatCompletions(
-    request: OpenAICanonicalEvaluationStrategyRequest
+    request: OpenAIChatCompletionsCreateRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
@@ -166,7 +173,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   async convertRequestForResponse(
-    request: OpenAICanonicalEvaluationStrategyRequest
+    request: OpenAIResponseCreateRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
@@ -200,7 +207,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleStreaming(
-    responseChunks: Stream<ChatCompletionChunk> | Stream<ResponseStreamEvent>
+    responseChunks: Array<any> | Array<any>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -210,7 +217,7 @@ export class OpenAICanonicalEvaluationStrategy
 
     // Determine API type from the first chunk
     const firstChunk = responseChunks[0];
-    if (firstChunk?.choices) {
+    if (firstChunk.choices) {
       return this.handleChatCompletionsStreaming(responseChunks);
     } else {
       return this.handleResponseApiStreaming(responseChunks);
@@ -218,7 +225,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleChatCompletionsStreaming(
-    responseChunks: Stream<ChatCompletionChunk>
+    responseChunks: Array<ChatCompletionChunk>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -271,7 +278,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleResponseApiStreaming(
-    responseChunks: Stream<ResponseStreamEvent>
+    responseChunks: Array<ResponseStreamEvent>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -354,36 +361,38 @@ export class OpenAICanonicalEvaluationStrategy
         }
       }
 
-      // Handle non-delta format
-      else if (firstChoice.message?.role) {
-        const message: LLMMessage = {
-          role: firstChoice.message.role,
-        };
-        if (firstChoice.message?.content) {
-          message.content = firstChoice.message.content;
-        }
-        if (firstChoice.message?.tool_calls) {
-          message.tool_calls = firstChoice.message.tool_calls.map(
-            (tool_call: any) => ({
-              name: tool_call.function.name,
-              arguments: tool_call.function.arguments
-                ? JSON.parse(tool_call.function.arguments)
-                : {},
-              id: tool_call.id,
-            })
-          );
-        }
-        if (message.content || message.tool_calls) {
-          messages.push(message);
-        }
-      }
+      // // TODO: remove
+      // // Handle non-delta format
+      // else if (firstChoice.message?.role) {
+      //   const message: LLMMessage = {
+      //     role: firstChoice.message.role,
+      //   };
+      //   if (firstChoice.message?.content) {
+      //     message.content = firstChoice.message.content;
+      //   }
+      //   if (firstChoice.message?.tool_calls) {
+      //     message.tool_calls = firstChoice.message.tool_calls.map(
+      //       (tool_call: any) => ({
+      //         name: tool_call.function.name,
+      //         arguments: tool_call.function.arguments
+      //           ? JSON.parse(tool_call.function.arguments)
+      //           : {},
+      //         id: tool_call.id,
+      //       })
+      //     );
+      //   }
+      //   if (message.content || message.tool_calls) {
+      //     messages.push(message);
+      //   }
+      // }
     }
 
     return { accumulatedContent, messageRole };
   }
 
   private processResponseApiChunk(
-    chunk: ResponseStreamEvent,
+    // chunk: ResponseStreamEvent,
+    chunk: any,
     messages: LLMMessage[]
   ): {
     accumulatedContent: string;
@@ -434,8 +443,10 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleChatCompletionsNonStreaming(
-    response: OpenAICanonicalEvaluationStrategyResponse
+    response: ChatCompletion
   ): Promise<LLMMessage[]> {
+    response = response as ChatCompletion;
+
     const messages: LLMMessage[] = [];
 
     if (!response?.choices) {
@@ -472,7 +483,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleResponseApiNonStreaming(
-    response: OpenAICanonicalEvaluationStrategyResponse
+    response: Response
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 

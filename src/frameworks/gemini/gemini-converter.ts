@@ -19,7 +19,7 @@ export class GeminiAICanonicalEvaluationStrategy
     request: GeminiAICanonicalEvaluationStrategyRequest,
     response: GeminiAICanonicalEvaluationStrategyResponse
   ): Promise<EvaluationProxyAPIRequest> {
-    let {
+    const {
       messages: requestMessages,
       available_tools: requestAvailableTools,
     } = await this.convertRequest(request);
@@ -28,10 +28,10 @@ export class GeminiAICanonicalEvaluationStrategy
     const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
 
     if (Array.isArray(response)) {
-      let streamingResultMessages = await this.handleStreaming(response);
+      const streamingResultMessages = await this.handleStreaming(response);
       messages.push(...streamingResultMessages);
     } else {
-      let nonStreamingResultMessages = await this.handleNonStreamingResponse(
+      const nonStreamingResultMessages = await this.handleNonStreamingResponse(
         response
       );
       messages.push(...nonStreamingResultMessages);

@@ -95,7 +95,6 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
             role: 'assistant',
             content:
               'Here is a terrible prompt to evaluate if sp500 is going to go up or down...',
-            tool_calls: [],
           },
         ],
         available_tools: [],
@@ -185,7 +184,6 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
             role: 'assistant',
             content:
               'Hello! I am doing well, thank you for asking. How can I help you today?',
-            tool_calls: [],
           },
         ],
         available_tools: [
@@ -259,7 +257,6 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
           {
             role: 'assistant',
             content: 'Simple response',
-            tool_calls: [],
           },
         ],
         available_tools: [],
@@ -302,7 +299,6 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
           {
             role: 'assistant',
             content: 'Response text',
-            tool_calls: [],
           },
         ],
         available_tools: [],
