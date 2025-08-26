@@ -65,18 +65,7 @@ export class OpenAICanonicalEvaluationStrategy
     } else if (request?.instructions || request?.input) {
       return this.convertRequestForResponse(request);
     } else {
-      // Fallback to original logic if neither pattern matches
-      const messages: LLMMessage[] = [];
-      let available_tools: LLMToolDefinition[] = [];
-
-      if (request?.tools) {
-        available_tools = convertToolsToLLMDefinitions(request?.tools);
-      }
-
-      return {
-        messages,
-        available_tools,
-      };
+      throw new Error('Invalid request: ' + JSON.stringify(request));
     }
   }
 
@@ -86,38 +75,8 @@ export class OpenAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 
-    // chat completions api
     if (request?.messages) {
-      for (const message of request.messages) {
-        let content: string | undefined;
-        let tool_calls: LLMToolCall[] | undefined;
-        if (message.role) {
-          if (message.content) {
-            content = message.content;
-          }
-          if (message.tool_calls && message.tool_calls.length > 0) {
-            tool_calls = [];
-            for (const tool_call of message.tool_calls) {
-              let tool_call_arguments: Record<string, any> = {};
-              if (tool_call.arguments) {
-                tool_call_arguments = JSON.parse(tool_call.arguments);
-              }
-              tool_calls.push({
-                name: tool_call.name,
-                id: tool_call.id,
-                arguments: tool_call_arguments,
-              });
-            }
-          }
-          messages.push({
-            role: message.role,
-            content: content,
-            tool_calls: tool_calls,
-          });
-        } else {
-          throw new Error('Invalid request: ' + JSON.stringify(message));
-        }
-      }
+      messages.push(...this.convertRequestMessages(request.messages));
     }
 
     if (request?.tools) {
@@ -130,13 +89,49 @@ export class OpenAICanonicalEvaluationStrategy
     };
   }
 
+  private convertRequestMessages(messages: any[]): LLMMessage[] {
+    const convertedMessages: LLMMessage[] = [];
+
+    for (const message of messages) {
+      let content: string | undefined;
+      let tool_calls: LLMToolCall[] | undefined;
+      if (message.role) {
+        if (message.content) {
+          content = message.content;
+        }
+        if (message.tool_calls && message.tool_calls.length > 0) {
+          tool_calls = [];
+          for (const tool_call of message.tool_calls) {
+            let tool_call_arguments: Record<string, any> = {};
+            if (tool_call.arguments) {
+              tool_call_arguments = JSON.parse(tool_call.arguments);
+            }
+            tool_calls.push({
+              name: tool_call.name,
+              id: tool_call.id,
+              arguments: tool_call_arguments,
+            });
+          }
+        }
+        convertedMessages.push({
+          role: message.role,
+          content: content,
+          tool_calls: tool_calls,
+        });
+      } else {
+        throw new Error('Invalid request: ' + JSON.stringify(message));
+      }
+    }
+
+    return convertedMessages;
+  }
+
   async convertRequestForResponse(
     request: OpenAICanonicalEvaluationStrategyRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 
-    // response api
     if (request?.instructions) {
       messages.push({
         role: 'system',
@@ -166,104 +161,50 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleStreaming(
-    response: OpenAICanonicalEvaluationStrategyResponse
+    responseChunks: OpenAICanonicalEvaluationStrategyResponse
+  ): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+
+    if (responseChunks.length === 0) {
+      return messages;
+    }
+
+    // Determine API type from the first chunk
+    const firstChunk = responseChunks[0];
+    if (firstChunk?.choices) {
+      return this.handleChatCompletionsStreaming(responseChunks);
+    } else {
+      return this.handleResponseApiStreaming(responseChunks);
+    }
+  }
+
+  private async handleChatCompletionsStreaming(
+    responseChunks: any[]
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
     // Initialize accumulator for content and tools from the first choice delta
     let accumulatedContent = '';
-    let accumulatedToolCalls: any[] = [];
+    const accumulatedToolCalls: any[] = [];
     let messageRole: string | undefined;
 
-    for (const chunk of response) {
-      // chat completions api - handle streaming with delta objects
-      if (chunk?.choices && chunk.choices.length > 0) {
-        const firstChoice = chunk.choices[0];
-
-        if (firstChoice.delta) {
-          // Accumulate role if present
-          if (firstChoice.delta.role) {
-            messageRole = firstChoice.delta.role;
-          }
-
-          // Accumulate content if present
-          if (firstChoice.delta.content) {
-            accumulatedContent += firstChoice.delta.content;
-          }
-
-          // Accumulate tool calls if present
-          if (firstChoice.delta.tool_calls) {
-            for (const toolCall of firstChoice.delta.tool_calls) {
-              // Initialize tool call accumulator if this is a new tool call
-              if (!accumulatedToolCalls[toolCall.index]) {
-                accumulatedToolCalls[toolCall.index] = {
-                  id: toolCall.id || '',
-                  type: toolCall.type || 'function',
-                  function: {
-                    name: toolCall.function?.name || '',
-                    arguments: '',
-                  },
-                };
-              }
-
-              // Accumulate function name and arguments
-              if (toolCall.function?.name) {
-                accumulatedToolCalls[toolCall.index].function.name =
-                  toolCall.function.name;
-              }
-              if (toolCall.function?.arguments) {
-                accumulatedToolCalls[toolCall.index].function.arguments +=
-                  toolCall.function.arguments;
-              }
-              if (toolCall.id) {
-                accumulatedToolCalls[toolCall.index].id = toolCall.id;
-              }
-            }
-          }
-        }
-
-        // Handle non-streaming format (fallback for compatibility)
-        else if (firstChoice.message?.role) {
-          const message: LLMMessage = {
-            role: firstChoice.message.role,
-          };
-          if (firstChoice.message?.content) {
-            message.content = firstChoice.message.content;
-          }
-          if (firstChoice.message?.tool_calls) {
-            message.tool_calls = firstChoice.message.tool_calls.map(
-              (tool_call: any) => ({
-                name: tool_call.function.name,
-                arguments: tool_call.function.arguments
-                  ? JSON.parse(tool_call.function.arguments)
-                  : {},
-                id: tool_call.id,
-              })
-            );
-          }
-          if (message.content || message.tool_calls) {
-            messages.push(message);
-          }
-        }
-      }
-
-      //response api
-      if (chunk.output) {
-        messages.push(...convertResponseMessagesToLLMMessages(chunk.output));
-      } else if (chunk.sequence_number && chunk.type == 'response.completed') {
-        // For streaming responses
-        if (chunk.response?.output) {
-          messages.push(
-            ...convertResponseMessagesToLLMMessages(chunk.response.output)
-          );
-        } else {
-          throw new Error('Invalid response: ' + JSON.stringify(chunk));
-        }
-      }
+    for (const chunk of responseChunks) {
+      const result = this.processChatCompletionsChunk(
+        chunk,
+        messages,
+        accumulatedContent,
+        accumulatedToolCalls,
+        messageRole
+      );
+      accumulatedContent = result.accumulatedContent;
+      messageRole = result.messageRole;
     }
 
-    // After processing all chunks, create the final accumulated message
-    if (messageRole) {
+    // After processing all chunks, create the final accumulated message if we have content
+    if (
+      messageRole &&
+      (accumulatedContent || accumulatedToolCalls.length > 0)
+    ) {
       const finalMessage: LLMMessage = {
         role: messageRole,
       };
@@ -284,12 +225,173 @@ export class OpenAICanonicalEvaluationStrategy
         );
       }
 
-      if (finalMessage.content || finalMessage.tool_calls) {
-        messages.push(finalMessage);
-      }
+      messages.push(finalMessage);
     }
 
     return messages;
+  }
+
+  private async handleResponseApiStreaming(
+    responseChunks: any[]
+  ): Promise<LLMMessage[]> {
+    const messages: LLMMessage[] = [];
+
+    // Initialize accumulator for Response API streaming content
+    let accumulatedContent = '';
+    let messageRole: string | undefined;
+
+    for (const chunk of responseChunks) {
+      const result = this.processResponseApiChunk(chunk, messages);
+      if (result) {
+        accumulatedContent += result.accumulatedContent;
+        if (result.messageRole) {
+          messageRole = result.messageRole;
+        }
+      }
+    }
+
+    // After processing all chunks, create the final accumulated message if we have content
+    if (messageRole && accumulatedContent) {
+      const finalMessage: LLMMessage = {
+        role: messageRole,
+        content: accumulatedContent,
+      };
+      messages.push(finalMessage);
+    }
+
+    return messages;
+  }
+
+  private processChatCompletionsChunk(
+    chunk: any,
+    messages: LLMMessage[],
+    accumulatedContent: string,
+    accumulatedToolCalls: any[],
+    messageRole: string | undefined
+  ): { accumulatedContent: string; messageRole: string | undefined } {
+    // chat completions api - handle streaming with delta objects
+    if (chunk?.choices && chunk.choices.length > 0) {
+      const firstChoice = chunk.choices[0];
+
+      if (firstChoice.delta) {
+        // Accumulate role if present
+        if (firstChoice.delta.role) {
+          messageRole = firstChoice.delta.role;
+        }
+
+        // Accumulate content if present
+        if (firstChoice.delta.content) {
+          accumulatedContent += firstChoice.delta.content;
+        }
+
+        // Accumulate tool calls if present
+        if (firstChoice.delta.tool_calls) {
+          for (const toolCall of firstChoice.delta.tool_calls) {
+            // Initialize tool call accumulator if this is a new tool call
+            if (!accumulatedToolCalls[toolCall.index]) {
+              accumulatedToolCalls[toolCall.index] = {
+                id: toolCall.id || '',
+                type: toolCall.type || 'function',
+                function: {
+                  name: toolCall.function?.name || '',
+                  arguments: '',
+                },
+              };
+            }
+
+            // Accumulate function name and arguments
+            if (toolCall.function?.name) {
+              accumulatedToolCalls[toolCall.index].function.name =
+                toolCall.function.name;
+            }
+            if (toolCall.function?.arguments) {
+              accumulatedToolCalls[toolCall.index].function.arguments +=
+                toolCall.function.arguments;
+            }
+            if (toolCall.id) {
+              accumulatedToolCalls[toolCall.index].id = toolCall.id;
+            }
+          }
+        }
+      }
+
+      // Handle non-delta format
+      else if (firstChoice.message?.role) {
+        const message: LLMMessage = {
+          role: firstChoice.message.role,
+        };
+        if (firstChoice.message?.content) {
+          message.content = firstChoice.message.content;
+        }
+        if (firstChoice.message?.tool_calls) {
+          message.tool_calls = firstChoice.message.tool_calls.map(
+            (tool_call: any) => ({
+              name: tool_call.function.name,
+              arguments: tool_call.function.arguments
+                ? JSON.parse(tool_call.function.arguments)
+                : {},
+              id: tool_call.id,
+            })
+          );
+        }
+        if (message.content || message.tool_calls) {
+          messages.push(message);
+        }
+      }
+    }
+
+    return { accumulatedContent, messageRole };
+  }
+
+  private processResponseApiChunk(
+    chunk: any,
+    messages: LLMMessage[]
+  ): {
+    accumulatedContent: string;
+    messageRole?: string;
+  } | null {
+    // Handle legacy format - direct output
+    if (chunk.output) {
+      messages.push(...convertResponseMessagesToLLMMessages(chunk.output));
+      return null;
+    }
+
+    // Handle streaming response completion
+    if (
+      chunk.sequence_number &&
+      chunk.type == 'response.completed' &&
+      chunk.response?.output
+    ) {
+      messages.push(
+        ...convertResponseMessagesToLLMMessages(chunk.response.output)
+      );
+      return null;
+    }
+
+    // Handle new streaming format - text deltas
+    if (chunk.type === 'response.output_text.delta' && chunk.delta) {
+      return {
+        accumulatedContent: chunk.delta,
+        messageRole: 'assistant', // Response API messages are always from assistant
+      };
+    }
+
+    // Handle new streaming format - completed response (fallback for final message)
+    if (chunk.type === 'response.completed' && chunk.response?.output) {
+      // This handles the case where we have a complete response at the end
+      // but we'll mainly rely on the accumulated deltas above
+      return null;
+    }
+
+    // Handle output item added (establishes the message role)
+    if (chunk.type === 'response.output_item.added' && chunk.item?.role) {
+      return {
+        accumulatedContent: '',
+        messageRole: chunk.item.role,
+      };
+    }
+
+    return null;
   }
 
   private async handleNonStreamingResponse(
@@ -299,30 +401,29 @@ export class OpenAICanonicalEvaluationStrategy
 
     // chat completions api
     if (response?.choices) {
-      for (const choice of response.choices) {
-        if (choice.message?.role) {
-          const message: LLMMessage = {
-            role: choice.message.role,
-          };
-          if (choice.message?.content) {
-            message.content = choice.message.content;
-          }
-          if (choice.message?.tool_calls) {
-            message.tool_calls = choice.message.tool_calls.map(
-              (tool_call: any) => ({
-                name: tool_call.function.name,
-                arguments: tool_call.function.arguments
-                  ? JSON.parse(tool_call.function.arguments)
-                  : {},
-                id: tool_call.id,
-              })
-            );
-          }
-          if (message.content || message.tool_calls) {
-            messages.push(message);
-          } else {
-            throw new Error('Invalid response: ' + JSON.stringify(choice));
-          }
+      const firstChoice = response.choices[0];
+      if (firstChoice.message?.role) {
+        const message: LLMMessage = {
+          role: firstChoice.message.role,
+        };
+        if (firstChoice.message?.content) {
+          message.content = firstChoice.message.content;
+        }
+        if (firstChoice.message?.tool_calls) {
+          message.tool_calls = firstChoice.message.tool_calls.map(
+            (tool_call: any) => ({
+              name: tool_call.function.name,
+              arguments: tool_call.function.arguments
+                ? JSON.parse(tool_call.function.arguments)
+                : {},
+              id: tool_call.id,
+            })
+          );
+        }
+        if (message.content || message.tool_calls) {
+          messages.push(message);
+        } else {
+          throw new Error('Invalid response: ' + JSON.stringify(firstChoice));
         }
       }
     }
