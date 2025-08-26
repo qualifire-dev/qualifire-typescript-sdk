@@ -16,10 +16,42 @@ import {
   ChatCompletionCreateParamsBase,
 } from 'openai/resources/chat/completions/completions';
 import { Completion } from 'openai/resources/completions';
-import { ResponseCreateParamsBase } from 'openai/resources/responses/responses';
+import {
+  Response,
+  ResponseCreateParamsBase,
+  ResponseStreamEvent,
+} from 'openai/resources/responses/responses';
+import { Stream } from 'openai/core';
 
-type OpenAICanonicalEvaluationStrategyResponse = any;
-type OpenAICanonicalEvaluationStrategyRequest = any;
+type OpenAIChatCompletionsResponse =
+  | ChatCompletion
+  | Stream<ChatCompletionChunk>;
+
+type OpenAIResponseCreateRequest =
+  | ResponseCreateParamsNonStreaming
+  | ResponseCreateParamsStreaming
+  | ResponseCreateParamsBase;
+
+type OpenAIResponseCreateRequestResponse =
+  | Response
+  | Stream<ResponseStreamEvent>;
+
+type OpenAIChatCompletionsCreateRequest =
+  | ChatCompletionCreateParamsNonStreaming
+  | ChatCompletionCreateParamsStreaming
+  | ChatCompletionCreateParamsBase;
+
+type OpenAIChatCompletionsCreateResponse =
+  | ChatCompletion
+  | Stream<ChatCompletionChunk>;
+
+type OpenAICanonicalEvaluationStrategyRequest =
+  | OpenAIResponseCreateRequestParams
+  | OpenAIChatCompletionsCreateRequest;
+
+type OpenAICanonicalEvaluationStrategyResponse =
+  | OpenAIResponseCreateRequestResponse
+  | OpenAIChatCompletionsCreateResponse;
 
 export class OpenAICanonicalEvaluationStrategy
   implements
@@ -168,7 +200,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleStreaming(
-    responseChunks: OpenAICanonicalEvaluationStrategyResponse
+    responseChunks: Stream<ChatCompletionChunk> | Stream<ResponseStreamEvent>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -186,7 +218,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleChatCompletionsStreaming(
-    responseChunks: any[]
+    responseChunks: Stream<ChatCompletionChunk>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -239,7 +271,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleResponseApiStreaming(
-    responseChunks: any[]
+    responseChunks: Stream<ResponseStreamEvent>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -270,7 +302,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private processChatCompletionsChunk(
-    chunk: any,
+    chunk: ChatCompletionChunk,
     messages: LLMMessage[],
     accumulatedContent: string,
     accumulatedToolCalls: any[],
@@ -351,7 +383,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private processResponseApiChunk(
-    chunk: any,
+    chunk: ResponseStreamEvent,
     messages: LLMMessage[]
   ): {
     accumulatedContent: string;
