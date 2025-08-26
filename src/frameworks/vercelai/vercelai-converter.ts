@@ -4,10 +4,16 @@ import {
   LLMMessage,
   LLMToolDefinition,
 } from '../../types';
+import { CanonicalEvaluationStrategy } from '../canonical';
 import {
-  CanonicalEvaluationStrategy,
-  convertResponseMessagesToLLMMessages,
-} from '../canonical';
+  AssistantModelMessage,
+  ModelMessage,
+  SystemModelMessage,
+  ToolModelMessage,
+  UserModelMessage,
+  TextPart,
+  ToolCallPart,
+} from '@ai-sdk/provider-utils';
 
 type VercelAICanonicalEvaluationStrategyResponse = any;
 type VercelAICanonicalEvaluationStrategyRequest = any;
@@ -57,7 +63,7 @@ export class VercelAICanonicalEvaluationStrategy
     if (request?.system) {
       messages.push({
         role: 'system',
-        content: String(request.system),
+        content: request.system,
       });
     }
 
@@ -65,10 +71,14 @@ export class VercelAICanonicalEvaluationStrategy
     if (request?.prompt) {
       messages.push({
         role: 'user',
-        content: String(request.prompt),
+        content: request.prompt,
       });
     } else if (request?.messages) {
-      messages.push(...convertResponseMessagesToLLMMessages(request.messages));
+      messages.push(
+        ...this.convertRequestMessageToLLMMessages(
+          request.messages //as ModelMessage[]
+        )
+      );
     }
 
     // Handle tools
@@ -186,5 +196,92 @@ export class VercelAICanonicalEvaluationStrategy
       });
     }
     return results;
+  }
+
+  // VercelAI-specific function to convert Response API messages to LLM messages
+  private convertRequestMessageToLLMMessages(
+    messages: ModelMessage[]
+  ): LLMMessage[] {
+    const extracted_messages: LLMMessage[] = [];
+
+    for (const message of messages) {
+      if (typeof message.content === 'string') {
+        extracted_messages.push({
+          role: message.role,
+          content: message.content,
+        });
+        continue;
+      }
+
+      switch (message.role) {
+        case 'system':
+          const systemMessage = message as SystemModelMessage;
+          extracted_messages.push({
+            role: 'system',
+            content: systemMessage.content,
+          });
+          break;
+        case 'user':
+          const userMessage = message as UserModelMessage;
+          if (typeof userMessage.content === 'string') {
+            extracted_messages.push({
+              role: 'user',
+              content: userMessage.content,
+            });
+          } else {
+            const textParts = userMessage.content.filter(
+              part => part.type === 'text'
+            ) as TextPart[];
+            extracted_messages.push({
+              role: 'user',
+              content: textParts.map(part => part.text).join(''),
+            });
+          }
+          break;
+        case 'assistant':
+          const assistantMessage = message as AssistantModelMessage;
+          if (typeof assistantMessage.content === 'string') {
+            extracted_messages.push({
+              role: 'assistant',
+              content: assistantMessage.content,
+            });
+          } else {
+            const textParts = assistantMessage.content.filter(
+              part => part.type === 'text' || part.type === 'reasoning'
+            ) as TextPart[];
+            const toolCalls = assistantMessage.content.filter(
+              part => part.type === 'tool-call'
+            ) as ToolCallPart[];
+            extracted_messages.push({
+              role: 'assistant',
+              content: textParts.map(part => part.text).join(''),
+              tool_calls: toolCalls.map(part => ({
+                name: part.toolName,
+                arguments: JSON.parse(part.input as string),
+                id: part.toolCallId,
+              })),
+            });
+          }
+          break;
+        case 'tool':
+          const toolMessage = message as ToolModelMessage;
+          extracted_messages.push({
+            role: 'tool-result',
+            tool_calls: toolMessage.content.map(part => {
+              return {
+                name: part.toolName,
+                arguments: part.output,
+                id: part.toolCallId,
+              };
+            }),
+          });
+          break;
+        default:
+          throw new Error(
+            'Invalid VercelAI output: message - ' + JSON.stringify(message)
+          );
+      }
+    }
+    return extracted_messages;
   }
 }
