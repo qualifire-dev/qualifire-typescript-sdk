@@ -84,67 +84,60 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages).toBeDefined();
-      expect(result.messages?.length).toBe(3); // system, user, assistant
-
-      // Should have system message
-      expect(result.messages?.[0]?.role).toBe('system');
-      expect(result.messages?.[0]?.content).toBe('Talk like a pirate.');
-
-      // Should have user message
-      expect(result.messages?.[1]?.role).toBe('user');
-      expect(result.messages?.[1]?.content).toBe(
-        'Are semicolons optional in JavaScript?'
-      );
-
-      // Should have assistant message
-      expect(result.messages?.[2]?.role).toBe('assistant');
-      expect(result.messages?.[2]?.content).toContain(
-        'Arrr matey! In JavaScript, semicolons be optional in most cases, but it be good practice to use them for clarity and to avoid potential issues with automatic semicolon insertion.'
-      );
-
-      // Verify tools are properly included
-      expect(result.available_tools).toBeDefined();
-      expect(result.available_tools).toHaveLength(2);
-
-      // Verify first tool (get_weather)
-      expect(result.available_tools?.[0]).toEqual({
-        name: 'get_weather',
-        description: 'Get the current weather for a location',
-        parameters: {
-          type: 'object',
-          properties: {
-            location: {
-              type: 'string',
-              description: 'The city and state, e.g. San Francisco, CA',
-            },
-            unit: {
-              type: 'string',
-              enum: ['celsius', 'fahrenheit'],
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'system',
+            content: 'Talk like a pirate.',
+          },
+          {
+            role: 'user',
+            content: 'Are semicolons optional in JavaScript?',
+          },
+          {
+            role: 'assistant',
+            content:
+              'Arrr matey! In JavaScript, semicolons be optional in most cases, but it be good practice to use them for clarity and to avoid potential issues with automatic semicolon insertion.',
+          },
+        ],
+        available_tools: [
+          {
+            name: 'get_weather',
+            description: 'Get the current weather for a location',
+            parameters: {
+              type: 'object',
+              properties: {
+                location: {
+                  type: 'string',
+                  description: 'The city and state, e.g. San Francisco, CA',
+                },
+                unit: {
+                  type: 'string',
+                  enum: ['celsius', 'fahrenheit'],
+                },
+              },
+              required: ['location'],
             },
           },
-          required: ['location'],
-        },
-      });
-
-      // Verify second tool (calculate_tip)
-      expect(result.available_tools?.[1]).toEqual({
-        name: 'calculate_tip',
-        description: 'Calculate tip amount for a bill',
-        parameters: {
-          type: 'object',
-          properties: {
-            bill_amount: {
-              type: 'number',
-              description: 'The bill amount',
-            },
-            tip_percentage: {
-              type: 'number',
-              description: 'The tip percentage (e.g., 15 for 15%)',
+          {
+            name: 'calculate_tip',
+            description: 'Calculate tip amount for a bill',
+            parameters: {
+              type: 'object',
+              properties: {
+                bill_amount: {
+                  type: 'number',
+                  description: 'The bill amount',
+                },
+                tip_percentage: {
+                  type: 'number',
+                  description: 'The tip percentage (e.g., 15 for 15%)',
+                },
+              },
+              required: ['bill_amount', 'tip_percentage'],
             },
           },
-          required: ['bill_amount', 'tip_percentage'],
-        },
+        ],
       });
     });
   });
@@ -178,19 +171,21 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages).toBeDefined();
-      expect(result.messages?.length).toBeGreaterThan(0);
-
-      // Should have user message from input
-      expect(result.messages?.[0]?.role).toBe('user');
-      expect(result.messages?.[0]?.content).toBe(
-        'Write a one-sentence bedtime story about a unicorn.'
-      );
-
-      // Should have assistant message from output
-      expect(result.messages?.[1]?.role).toBe('assistant');
-      expect(result.messages?.[1]?.content).toContain('unicorn'); // Story content
-      expect(result.messages?.[1]?.content).toContain('moonlit'); // Story content
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Write a one-sentence bedtime story about a unicorn.',
+          },
+          {
+            role: 'assistant',
+            content:
+              'Once upon a moonlit night, a gentle unicorn with a silver mane danced through a starlit meadow, spreading magic and wonder to all who dreamed.',
+            tool_calls: [],
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 
@@ -221,10 +216,19 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(2); // user + 1 assistant messages
-      expect(result.messages?.[0]?.role).toBe('user');
-      expect(result.messages?.[1]?.role).toBe('assistant');
-      expect(result.messages?.[1]?.content).toBe('Hi there!');
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Hello',
+          },
+          {
+            role: 'assistant',
+            content: 'Hi there!',
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
   describe('edge cases', () => {
@@ -242,8 +246,16 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         request,
         response
       );
-      expect(result.messages?.length).toBe(1);
-      expect(result.messages?.[0].role).toBe('assistant');
+
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'assistant',
+            content: 'Response',
+          },
+        ],
+        available_tools: [],
+      });
     });
 
     it('should handle missing optional fields', async () => {
@@ -265,7 +277,20 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         request,
         response
       );
-      expect(result.messages?.length).toBe(2);
+
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Test',
+          },
+          {
+            role: 'assistant',
+            content: 'Response',
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 });
