@@ -79,26 +79,27 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages).toBeDefined();
-      expect(result.messages?.length).toBe(3); // system, user, assistant
-
-      // Should have system message
-      expect(result.messages?.[0]?.role).toBe('system');
-      expect(result.messages?.[0]?.content).toBe(
-        'You are a not so helpful assistant. Only giving to opposite answers of what I ask.'
-      );
-
-      // Should have user message
-      expect(result.messages?.[1]?.role).toBe('user');
-      expect(result.messages?.[1]?.content).toBe(
-        'How to write an awesome prompt to evaluate if sp500 is going to go up or down?'
-      );
-
-      // Should have assistant message
-      expect(result.messages?.[2]?.role).toBe('assistant');
-      expect(result.messages?.[2]?.content).toContain(
-        'Here is a terrible prompt to evaluate if sp500 '
-      ); // Content from the response
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are a not so helpful assistant. Only giving to opposite answers of what I ask.',
+          },
+          {
+            role: 'user',
+            content:
+              'How to write an awesome prompt to evaluate if sp500 is going to go up or down?',
+          },
+          {
+            role: 'assistant',
+            content:
+              'Here is a terrible prompt to evaluate if sp500 is going to go up or down...',
+            tool_calls: [],
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 
@@ -170,56 +171,54 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages).toBeDefined();
-      expect(result.messages?.[0]?.role).toBe('system');
-      expect(result.messages?.[0]?.content).toBe(
-        'You are a helpful assistant.'
-      );
-
-      expect(result.messages?.[1]?.role).toBe('user');
-      expect(result.messages?.[1]?.content).toBe('Hello, how are you?');
-
-      expect(result.messages?.[2]?.role).toBe('assistant');
-      expect(result.messages?.[2]?.content).toBe(
-        'Hello! I am doing well, thank you for asking. How can I help you today?'
-      );
-      expect(result.messages?.length).toBe(3); // system, user, assistant
-
-      // Verify tools are properly included
-      expect(result.available_tools).toBeDefined();
-
-      // Verify first tool (get_weather)
-      expect(result.available_tools?.[0]).toEqual({
-        name: 'get_weather',
-        description: 'Get the current weather for a location',
-        parameters: {
-          location: {
-            type: 'string',
-            description: 'The city and state, e.g. San Francisco, CA',
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant.',
           },
-          unit: {
-            type: 'string',
-            enum: ['celsius', 'fahrenheit'],
+          {
+            role: 'user',
+            content: 'Hello, how are you?',
           },
-        },
+          {
+            role: 'assistant',
+            content:
+              'Hello! I am doing well, thank you for asking. How can I help you today?',
+            tool_calls: [],
+          },
+        ],
+        available_tools: [
+          {
+            name: 'get_weather',
+            description: 'Get the current weather for a location',
+            parameters: {
+              location: {
+                type: 'string',
+                description: 'The city and state, e.g. San Francisco, CA',
+              },
+              unit: {
+                type: 'string',
+                enum: ['celsius', 'fahrenheit'],
+              },
+            },
+          },
+          {
+            name: 'calculate_tip',
+            description: 'Calculate tip amount for a bill',
+            parameters: {
+              bill_amount: {
+                type: 'number',
+                description: 'The bill amount',
+              },
+              tip_percentage: {
+                type: 'number',
+                description: 'The tip percentage (e.g., 15 for 15%)',
+              },
+            },
+          },
+        ],
       });
-
-      // Verify second tool (calculate_tip)
-      expect(result.available_tools?.[1]).toEqual({
-        name: 'calculate_tip',
-        description: 'Calculate tip amount for a bill',
-        parameters: {
-          bill_amount: {
-            type: 'number',
-            description: 'The bill amount',
-          },
-          tip_percentage: {
-            type: 'number',
-            description: 'The tip percentage (e.g., 15 for 15%)',
-          },
-        },
-      });
-      expect(result.available_tools).toHaveLength(2);
     });
   });
 
@@ -251,11 +250,20 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.[0]?.role).toBe('user');
-      expect(result.messages?.[0]?.content).toBe('Simple string message');
-
-      expect(result.messages?.[1]?.role).toBe('assistant');
-      expect(result.messages?.[1]?.content).toBe('Simple response');
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Simple string message',
+          },
+          {
+            role: 'assistant',
+            content: 'Simple response',
+            tool_calls: [],
+          },
+        ],
+        available_tools: [],
+      });
     });
 
     it('should handle array content', async () => {
@@ -285,8 +293,20 @@ describe('ClaudeCanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.[0]?.role).toBe('user');
-      expect(result.messages?.[0]?.content).toBe('First part Second part');
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'First part Second part',
+          },
+          {
+            role: 'assistant',
+            content: 'Response text',
+            tool_calls: [],
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 });

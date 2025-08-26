@@ -76,50 +76,47 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(2);
-
-      expect(result.messages?.[0]?.role).toBe('user');
-      expect(result.messages?.[0]?.content).toBe('What is JavaScript?');
-
-      expect(result.messages?.[1]?.role).toBe('assistant');
-      expect(result.messages?.[1]?.content).toBe(
-        'JavaScript is a programming language.'
-      );
-
-      // Verify tools are properly included
-      expect(result.available_tools).toBeDefined();
-      expect(result.available_tools).toHaveLength(2);
-
-      // Verify first tool (get_weather)
-      expect(result.available_tools?.[0]).toEqual({
-        name: 'get_weather',
-        description: 'Get the current weather for a location',
-        parameters: {
-          location: {
-            type: 'string',
-            description: 'The city and state, e.g. San Francisco, CA',
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'What is JavaScript?',
           },
-          unit: {
-            type: 'string',
-            enum: ['celsius', 'fahrenheit'],
+          {
+            role: 'assistant',
+            content: 'JavaScript is a programming language.',
           },
-        },
-      });
-
-      // Verify second tool (calculate_tip)
-      expect(result.available_tools?.[1]).toEqual({
-        name: 'calculate_tip',
-        description: 'Calculate tip amount for a bill',
-        parameters: {
-          bill_amount: {
-            type: 'number',
-            description: 'The bill amount',
+        ],
+        available_tools: [
+          {
+            name: 'get_weather',
+            description: 'Get the current weather for a location',
+            parameters: {
+              location: {
+                type: 'string',
+                description: 'The city and state, e.g. San Francisco, CA',
+              },
+              unit: {
+                type: 'string',
+                enum: ['celsius', 'fahrenheit'],
+              },
+            },
           },
-          tip_percentage: {
-            type: 'number',
-            description: 'The tip percentage (e.g., 15 for 15%)',
+          {
+            name: 'calculate_tip',
+            description: 'Calculate tip amount for a bill',
+            parameters: {
+              bill_amount: {
+                type: 'number',
+                description: 'The bill amount',
+              },
+              tip_percentage: {
+                type: 'number',
+                description: 'The tip percentage (e.g., 15 for 15%)',
+              },
+            },
           },
-        },
+        ],
       });
     });
 
@@ -151,10 +148,19 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(2);
-
-      expect(result.messages?.[0]?.role).toBe('user');
-      expect(result.messages?.[0]?.content).toBe('Explain async/await');
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Explain async/await',
+          },
+          {
+            role: 'assistant',
+            content: 'Async/await is used for asynchronous programming.',
+          },
+        ],
+        available_tools: [],
+      });
     });
 
     it('should handle request without message property', async () => {
@@ -175,11 +181,15 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(1); // Only assistant message
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage?.content).toBe('Response text');
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'assistant',
+            content: 'Response text',
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 
@@ -209,12 +219,19 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(2); // user + 1 aggregated assistant message
-      const assistantMessages = result.messages?.filter(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessages?.length).toBe(1);
-      expect(assistantMessages?.[0].content).toBe('First part Second part');
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Test question',
+          },
+          {
+            role: 'assistant',
+            content: 'First part Second part',
+          },
+        ],
+        available_tools: [],
+      });
     });
 
     it('should handle multiple candidates', async () => {
@@ -248,13 +265,23 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(3); // user + 2 candidates
-      const assistantMessages = result.messages?.filter(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessages?.length).toBe(2);
-      expect(assistantMessages?.[0].content).toBe('First candidate');
-      expect(assistantMessages?.[1].content).toBe('Second candidate');
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Test question',
+          },
+          {
+            role: 'assistant',
+            content: 'First candidate',
+          },
+          {
+            role: 'assistant',
+            content: 'Second candidate',
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 
@@ -274,7 +301,16 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         request,
         response
       );
-      expect(result.messages?.length).toBe(1); // Only user message
+
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Test question',
+          },
+        ],
+        available_tools: [],
+      });
     });
 
     it('should handle missing candidates property', async () => {
@@ -292,7 +328,16 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         request,
         response
       );
-      expect(result.messages?.length).toBe(1); // Only user message
+
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Test question',
+          },
+        ],
+        available_tools: [],
+      });
     });
 
     it('should handle empty parts array', async () => {
@@ -319,7 +364,16 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         request,
         response
       );
-      expect(result.messages?.length).toBe(1); // Only user message
+
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Test question',
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 
@@ -391,22 +445,20 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages).toBeDefined();
-      expect(result.messages?.length).toBe(2); // user and assistant
-
-      // Should have user message
-      const userMessage = result.messages?.find(m => m.role === 'user');
-      expect(userMessage).toBeDefined();
-      expect(userMessage?.content).toBe('Schedule a meeting');
-
-      // Should have assistant message with accumulated content
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage).toBeDefined();
-      expect(assistantMessage?.content).toBe(
-        'The meeting has been scheduled with Bob and Alice for March 27, 2025, at 10:00 AM to discuss Q3 planning.'
-      );
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Schedule a meeting',
+          },
+          {
+            role: 'assistant',
+            content:
+              'The meeting has been scheduled with Bob and Alice for March 27, 2025, at 10:00 AM to discuss Q3 planning.',
+          },
+        ],
+        available_tools: [],
+      });
     });
 
     it('should handle role changes in streaming chunks', async () => {
@@ -448,17 +500,23 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(3); // user request + model response + user response
-
-      const assistantMessage = result.messages?.find(
-        m => m.role === 'assistant'
-      );
-      expect(assistantMessage?.content).toBe('First response from model');
-
-      const userResponseMessage = result.messages?.find(
-        m => m.role === 'user' && m.content === 'Second response from user'
-      );
-      expect(userResponseMessage).toBeDefined();
+      expect(result).toEqual({
+        messages: [
+          {
+            role: 'user',
+            content: 'Ask a question',
+          },
+          {
+            role: 'assistant',
+            content: 'First response from model',
+          },
+          {
+            role: 'user',
+            content: 'Second response from user',
+          },
+        ],
+        available_tools: [],
+      });
     });
   });
 });
