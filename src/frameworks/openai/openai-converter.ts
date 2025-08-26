@@ -1,6 +1,7 @@
 import {
   EvaluationProxyAPIRequest,
   LLMMessage,
+  LLMToolCall,
   LLMToolDefinition,
 } from '../../types';
 import {
@@ -88,10 +89,30 @@ export class OpenAICanonicalEvaluationStrategy
     // chat completions api
     if (request?.messages) {
       for (const message of request.messages) {
-        if (message.role && message.content) {
+        let content: string | undefined;
+        let tool_calls: LLMToolCall[] | undefined;
+        if (message.role) {
+          if (message.content) {
+            content = message.content;
+          }
+          if (message.tool_calls && message.tool_calls.length > 0) {
+            tool_calls = [];
+            for (const tool_call of message.tool_calls) {
+              let tool_call_arguments: Record<string, any> | undefined;
+              if (tool_call.arguments) {
+                tool_call_arguments = JSON.parse(tool_call.arguments);
+              }
+              tool_calls.push({
+                name: tool_call.name,
+                id: tool_call.id,
+                arguments: tool_call_arguments,
+              });
+            }
+          }
           messages.push({
             role: message.role,
-            content: message.content,
+            content: content,
+            tool_calls: tool_calls,
           });
         } else {
           throw new Error('Invalid request: ' + JSON.stringify(message));
