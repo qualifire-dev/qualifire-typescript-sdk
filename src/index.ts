@@ -174,7 +174,7 @@ export class Qualifire {
     const requestConverter = converterFactory();
 
     
-    let evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(EvaluationRequestV2.request, EvaluationRequestV2.response)
+    const evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(EvaluationRequestV2.request, EvaluationRequestV2.response)
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {
