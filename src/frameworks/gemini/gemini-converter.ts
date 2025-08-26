@@ -6,11 +6,18 @@ import {
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
 
+type GeminiAICanonicalEvaluationStrategyResponse = any;
+type GeminiAICanonicalEvaluationStrategyRequest = any;
+
 export class GeminiAICanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy<any, any> {
+  implements
+    CanonicalEvaluationStrategy<
+      GeminiAICanonicalEvaluationStrategyRequest,
+      GeminiAICanonicalEvaluationStrategyResponse
+    > {
   async convertToQualifireEvaluationRequest(
-    request: any,
-    response: any
+    request: GeminiAICanonicalEvaluationStrategyRequest,
+    response: GeminiAICanonicalEvaluationStrategyResponse
   ): Promise<EvaluationProxyAPIRequest> {
     let {
       messages: requestMessages,
@@ -36,7 +43,9 @@ export class GeminiAICanonicalEvaluationStrategy
     };
   }
 
-  async convertRequest(request: any): Promise<EvaluationProxyAPIRequest> {
+  async convertRequest(
+    request: GeminiAICanonicalEvaluationStrategyRequest
+  ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     const available_tools: LLMToolDefinition[] = [];
 
@@ -58,12 +67,10 @@ export class GeminiAICanonicalEvaluationStrategy
     // Handle request contents
     if (request?.contents) {
       for (const content of request.contents) {
-        if (content.parts) {
-          for (const part of content.parts) {
-            const message = convertPartToLLMMessage(part, content.role);
-            if (message) {
-              messages.push(message);
-            }
+        if (content.parts && content.parts.length > 0) {
+          const message = convertContentToLLMMessage(content);
+          if (message) {
+            messages.push(message);
           }
         }
       }
@@ -75,21 +82,22 @@ export class GeminiAICanonicalEvaluationStrategy
     };
   }
 
-  private async handleResponse(response: any): Promise<LLMMessage[]> {
+  private async handleResponse(
+    response: GeminiAICanonicalEvaluationStrategyResponse
+  ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
     // Handle response candidates
     if (response?.candidates) {
       for (const candidate of response.candidates) {
-        if (candidate.content?.role && candidate.content?.parts) {
-          for (const part of candidate.content.parts) {
-            const message = convertPartToLLMMessage(
-              part,
-              candidate.content.role
-            );
-            if (message) {
-              messages.push(message);
-            }
+        if (
+          candidate.content?.role &&
+          candidate.content?.parts &&
+          candidate.content.parts.length > 0
+        ) {
+          const message = convertContentToLLMMessage(candidate.content);
+          if (message) {
+            messages.push(message);
           }
         }
       }
@@ -98,7 +106,9 @@ export class GeminiAICanonicalEvaluationStrategy
     return messages;
   }
 
-  private async handleStreaming(response: any[]): Promise<LLMMessage[]> {
+  private async handleStreaming(
+    response: GeminiAICanonicalEvaluationStrategyResponse
+  ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
     let accumulatedText = '';
     let currentRole = '';
@@ -146,7 +156,7 @@ export class GeminiAICanonicalEvaluationStrategy
   }
 
   private async handleNonStreamingResponse(
-    response: any
+    response: GeminiAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
     // // Handle nested response structure (VertexAI format)
     // if (response?.response?.candidates) {
@@ -157,56 +167,68 @@ export class GeminiAICanonicalEvaluationStrategy
   }
 }
 
-// Helper function to convert a Gemini part to LLMMessage
-function convertPartToLLMMessage(
-  part: any,
-  defaultRole: string
-): LLMMessage | null {
-  let role = defaultRole;
-  let content: string | undefined;
-  let tool_calls: LLMToolCall[] = [];
-  let validMessage = false;
-
-  if (part.text) {
-    validMessage = true;
-    // Handle text parts
-    role = role === 'model' ? 'assistant' : role;
-    content = part.text;
-  }
-
-  if (part.functionCall) {
-    validMessage = true;
-    // Handle function call parts
-    role = 'assistant';
-    tool_calls = [
-      {
-        name: part.functionCall.name,
-        arguments: part.functionCall.args,
-        id: `gemini_${Date.now()}_${Math.random()}`, // Generate unique ID
-      },
-    ];
-  }
-
-  if (part.functionResponse) {
-    validMessage = true;
-    role = 'tool';
-    content = JSON.stringify(part.functionResponse.response?.result);
-  }
-
-  if (part.thoughtSignature) {
-    // Handle thought signature parts (internal reasoning)
-    // These are typically not meant for end users, so we can skip them
-    validMessage = true;
-  }
-
-  if (!validMessage) {
-    console.warn('Unhandled Gemini response part type:', part);
+// Helper function to convert a Gemini content object (with multiple parts) to LLMMessage
+function convertContentToLLMMessage(content: any): LLMMessage | null {
+  if (!content.parts || content.parts.length === 0) {
     return null;
   }
 
+  let role = content.role;
+  let textContent: string[] = [];
+  let tool_calls: LLMToolCall[] = [];
+  let toolResponseContent: string[] = [];
+  let hasValidContent = false;
+
+  // Process all parts and aggregate them
+  for (const part of content.parts) {
+    if (part.text) {
+      hasValidContent = true;
+      textContent.push(part.text);
+    }
+
+    if (part.functionCall) {
+      hasValidContent = true;
+      role = 'assistant'; // Function calls are always from assistant
+      tool_calls.push({
+        name: part.functionCall.name,
+        arguments: part.functionCall.args,
+        id: `gemini_${Date.now()}_${Math.random()}`, // Generate unique ID
+      });
+    }
+
+    if (part.functionResponse) {
+      hasValidContent = true;
+      role = 'tool';
+      toolResponseContent.push(
+        JSON.stringify(part.functionResponse.response?.result)
+      );
+    }
+
+    if (part.thoughtSignature) {
+      hasValidContent = true;
+      // Handle thought signature parts (internal reasoning)
+      // These are typically not meant for end users, so we can skip them
+    }
+  }
+
+  if (!hasValidContent) {
+    return null;
+  }
+
+  // Determine final role
+  const finalRole = role === 'model' ? 'assistant' : role;
+
+  // Aggregate content based on message type
+  let finalContent: string | undefined;
+  if (textContent.length > 0) {
+    finalContent = textContent.join(' ');
+  } else if (toolResponseContent.length > 0) {
+    finalContent = toolResponseContent.join(' ');
+  }
+
   return {
-    role,
-    content,
-    tool_calls,
+    role: finalRole,
+    content: finalContent,
+    tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
   };
 }

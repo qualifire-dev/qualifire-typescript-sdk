@@ -209,13 +209,12 @@ describe('GeminiAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(3); // user + 2 assistant parts
+      expect(result.messages?.length).toBe(2); // user + 1 aggregated assistant message
       const assistantMessages = result.messages?.filter(
         m => m.role === 'assistant'
       );
-      expect(assistantMessages?.length).toBe(2);
-      expect(assistantMessages?.[0].content).toBe('First part');
-      expect(assistantMessages?.[1].content).toBe('Second part');
+      expect(assistantMessages?.length).toBe(1);
+      expect(assistantMessages?.[0].content).toBe('First part Second part');
     });
 
     it('should handle multiple candidates', async () => {

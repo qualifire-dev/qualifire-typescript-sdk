@@ -1,4 +1,5 @@
 import { VercelAICanonicalEvaluationStrategy } from '../src/frameworks/vercelai/vercelai-converter';
+import { ReadableStream } from 'stream/web';
 
 describe('VercelAICanonicalEvaluationStrategy', () => {
   let converter: VercelAICanonicalEvaluationStrategy;
@@ -14,11 +15,14 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         prompt: 'Are the sky blue?',
       };
 
-      // Create a mock async iterable for textStream
-      const mockTextStream = (async function* () {
-        yield 'Yes, the sky is blue.';
-        yield ' It appears blue due to Rayleigh scattering.';
-      })();
+      // Create a mock ReadableStream for textStream
+      const mockTextStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue('Yes, the sky is blue.');
+          controller.enqueue(' It appears blue due to Rayleigh scattering.');
+          controller.close();
+        },
+      });
 
       // Create a mock promise for toolCalls
       const mockToolCalls = Promise.resolve([
@@ -91,13 +95,24 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         },
       };
 
-      // Create a mock async iterable for textStream
-      const mockTextStream = (async function* () {
-        yield "The sky often appears blue during the daytime because of the way Earth's atmosphere scatters sunlight. ";
-        yield 'When sunlight enters the atmosphere, shorter wavelengths of light (blue and violet) are scattered more than longer wavelengths (red and yellow). ';
-        yield 'Our eyes are more sensitive to blue light, so we see the sky as blue. ';
-        yield 'However, the color of the sky can change based on weather, time of day, and other atmospheric conditions—for example, it might look orange or red at sunrise or sunset, or gray on a cloudy day.';
-      })();
+      // Create a mock ReadableStream for textStream
+      const mockTextStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            "The sky often appears blue during the daytime because of the way Earth's atmosphere scatters sunlight. "
+          );
+          controller.enqueue(
+            'When sunlight enters the atmosphere, shorter wavelengths of light (blue and violet) are scattered more than longer wavelengths (red and yellow). '
+          );
+          controller.enqueue(
+            'Our eyes are more sensitive to blue light, so we see the sky as blue. '
+          );
+          controller.enqueue(
+            'However, the color of the sky can change based on weather, time of day, and other atmospheric conditions—for example, it might look orange or red at sunrise or sunset, or gray on a cloudy day.'
+          );
+          controller.close();
+        },
+      });
 
       const response = {
         textStream: mockTextStream,

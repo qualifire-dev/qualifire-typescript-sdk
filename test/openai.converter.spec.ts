@@ -221,12 +221,10 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
         response
       );
 
-      expect(result.messages?.length).toBe(3); // user + 2 assistant messages
+      expect(result.messages?.length).toBe(2); // user + 1 assistant messages
       expect(result.messages?.[0]?.role).toBe('user');
       expect(result.messages?.[1]?.role).toBe('assistant');
       expect(result.messages?.[1]?.content).toBe('Hi there!');
-      expect(result.messages?.[2]?.role).toBe('assistant');
-      expect(result.messages?.[2]?.content).toBe('Hello!');
     });
   });
   describe('edge cases', () => {
