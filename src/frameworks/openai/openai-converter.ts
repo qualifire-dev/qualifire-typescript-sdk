@@ -27,6 +27,58 @@ export class OpenAICanonicalEvaluationStrategy
       OpenAICanonicalEvaluationStrategyRequest,
       OpenAICanonicalEvaluationStrategyResponse
     > {
+  async convertToQualifireEvaluationRequest(
+    request: OpenAICanonicalEvaluationStrategyRequest,
+    response: OpenAICanonicalEvaluationStrategyResponse
+  ): Promise<EvaluationProxyAPIRequest> {
+    const {
+      messages: requestMessages,
+      available_tools: requestAvailableTools,
+    } = await this.convertRequest(request);
+
+    const messages: LLMMessage[] = requestMessages || [];
+    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
+
+    if (Array.isArray(response)) {
+      const streamingResultMessages = await this.handleStreaming(response);
+      messages.push(...streamingResultMessages);
+    } else {
+      const nonStreamingResultMessages = await this.handleNonStreamingResponse(
+        response
+      );
+      messages.push(...nonStreamingResultMessages);
+    }
+
+    return {
+      messages,
+      available_tools,
+    };
+  }
+
+  async convertRequest(
+    request: OpenAICanonicalEvaluationStrategyRequest
+  ): Promise<EvaluationProxyAPIRequest> {
+    // Determine which API is being used and call the appropriate method
+    if (request?.messages) {
+      return this.convertRequestForChatCompletions(request);
+    } else if (request?.instructions || request?.input) {
+      return this.convertRequestForResponse(request);
+    } else {
+      // Fallback to original logic if neither pattern matches
+      const messages: LLMMessage[] = [];
+      let available_tools: LLMToolDefinition[] = [];
+
+      if (request?.tools) {
+        available_tools = convertToolsToLLMDefinitions(request?.tools);
+      }
+
+      return {
+        messages,
+        available_tools,
+      };
+    }
+  }
+
   async convertRequestForChatCompletions(
     request: OpenAICanonicalEvaluationStrategyRequest
   ): Promise<EvaluationProxyAPIRequest> {
@@ -84,58 +136,6 @@ export class OpenAICanonicalEvaluationStrategy
 
     if (request?.tools) {
       available_tools = convertToolsToLLMDefinitions(request?.tools);
-    }
-
-    return {
-      messages,
-      available_tools,
-    };
-  }
-
-  async convertRequest(
-    request: OpenAICanonicalEvaluationStrategyRequest
-  ): Promise<EvaluationProxyAPIRequest> {
-    // Determine which API is being used and call the appropriate method
-    if (request?.messages) {
-      return this.convertRequestForChatCompletions(request);
-    } else if (request?.instructions || request?.input) {
-      return this.convertRequestForResponse(request);
-    } else {
-      // Fallback to original logic if neither pattern matches
-      const messages: LLMMessage[] = [];
-      let available_tools: LLMToolDefinition[] = [];
-
-      if (request?.tools) {
-        available_tools = convertToolsToLLMDefinitions(request?.tools);
-      }
-
-      return {
-        messages,
-        available_tools,
-      };
-    }
-  }
-
-  async convertToQualifireEvaluationRequest(
-    request: OpenAICanonicalEvaluationStrategyRequest,
-    response: OpenAICanonicalEvaluationStrategyResponse
-  ): Promise<EvaluationProxyAPIRequest> {
-    let {
-      messages: requestMessages,
-      available_tools: requestAvailableTools,
-    } = await this.convertRequest(request);
-
-    const messages: LLMMessage[] = requestMessages || [];
-    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
-
-    if (Array.isArray(response)) {
-      let streamingResultMessages = await this.handleStreaming(response);
-      messages.push(...streamingResultMessages);
-    } else {
-      let nonStreamingResultMessages = await this.handleNonStreamingResponse(
-        response
-      );
-      messages.push(...nonStreamingResultMessages);
     }
 
     return {
