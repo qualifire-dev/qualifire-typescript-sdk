@@ -212,7 +212,8 @@ function convertContentToLLMMessage(content: any): LLMMessage | null {
   }
 
   if (!hasValidContent) {
-    return null;
+    role = 'assistant';
+    textContent = [JSON.stringify(content)];
   }
 
   // Determine final role
