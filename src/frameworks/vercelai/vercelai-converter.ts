@@ -9,11 +9,18 @@ import {
   convertResponseMessagesToLLMMessages,
 } from '../canonical';
 
+type VercelAICanonicalEvaluationStrategyResponse = any;
+type VercelAICanonicalEvaluationStrategyRequest = any;
+
 export class VercelAICanonicalEvaluationStrategy
-  implements CanonicalEvaluationStrategy<any, any> {
+  implements
+    CanonicalEvaluationStrategy<
+      VercelAICanonicalEvaluationStrategyRequest,
+      VercelAICanonicalEvaluationStrategyResponse
+    > {
   async convertToQualifireEvaluationRequest(
-    request: any,
-    response: any
+    request: VercelAICanonicalEvaluationStrategyRequest,
+    response: VercelAICanonicalEvaluationStrategyResponse
   ): Promise<EvaluationProxyAPIRequest> {
     const {
       messages: requestMessages,
@@ -40,7 +47,9 @@ export class VercelAICanonicalEvaluationStrategy
     };
   }
 
-  async convertRequest(request: any): Promise<EvaluationProxyAPIRequest> {
+  async convertRequest(
+    request: VercelAICanonicalEvaluationStrategyRequest
+  ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 
@@ -73,7 +82,9 @@ export class VercelAICanonicalEvaluationStrategy
     };
   }
 
-  private async handleStreaming(response: any): Promise<LLMMessage[]> {
+  private async handleStreaming(
+    response: VercelAICanonicalEvaluationStrategyResponse
+  ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
     // Handle streaming text content
@@ -108,28 +119,11 @@ export class VercelAICanonicalEvaluationStrategy
       }
     }
 
-    // Handle tool results from streaming response
-    if (response.toolResults) {
-      const toolResults = await response.toolResults;
-      for (const toolResult of toolResults) {
-        messages.push({
-          role: 'tool',
-          tool_calls: [
-            {
-              name: toolResult.toolName,
-              arguments: toolResult.output,
-              id: toolResult.toolCallId,
-            },
-          ],
-        });
-      }
-    }
-
     return messages;
   }
 
   private async handleNonStreamingResponse(
-    response: any
+    response: VercelAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -138,13 +132,6 @@ export class VercelAICanonicalEvaluationStrategy
         role: 'assistant',
         content: response.text,
       });
-    }
-
-    // Handle response with messages
-    if (response?.response?.messages) {
-      messages.push(
-        ...convertResponseMessagesToLLMMessages(response.response.messages)
-      );
     }
 
     // Handle direct messages property
