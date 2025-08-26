@@ -126,17 +126,40 @@ export class VercelAICanonicalEvaluationStrategy
     response: VercelAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
-
-    if (response.text && typeof response.text === 'string') {
-      messages.push({
-        role: 'assistant',
-        content: response.text,
-      });
-    }
-
-    // Handle direct messages property
-    if (response.messages) {
-      messages.push(...convertResponseMessagesToLLMMessages(response.messages));
+    // Handle messages with tool-call and tool-result content
+    if (response.messages && Array.isArray(response.messages)) {
+      for (const message of response.messages) {
+        if (message.content && Array.isArray(message.content)) {
+          for (const contentItem of message.content) {
+            if (contentItem.type === 'tool-call') {
+              // Handle tool-call content
+              messages.push({
+                role: 'assistant',
+                tool_calls: [
+                  {
+                    name: contentItem.toolName,
+                    arguments: contentItem.input,
+                    id: contentItem.toolCallId,
+                  },
+                ],
+              });
+            } else if (contentItem.type === 'tool-result') {
+              // Handle tool-result content
+              messages.push({
+                role: 'tool',
+                content: JSON.stringify(contentItem.output),
+                tool_calls: [
+                  {
+                    name: contentItem.toolName,
+                    arguments: contentItem.input,
+                    id: contentItem.toolCallId,
+                  },
+                ],
+              });
+            }
+          }
+        }
+      }
     }
 
     return messages;

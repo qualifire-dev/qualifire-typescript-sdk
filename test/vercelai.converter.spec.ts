@@ -158,5 +158,105 @@ describe('VercelAICanonicalEvaluationStrategy', () => {
         result.available_tools?.[0]?.parameters?.location?.description
       ).toBe('The location to get the weather for');
     });
+
+    it('should handle non-streaming response with tool-call and tool-result', async () => {
+      const request = {
+        system: 'You are a helpful assistant that can use tools.',
+        prompt: 'What is the weather in Antarctica?',
+        tools: {
+          weather: {
+            description: 'Get the weather in a location',
+            inputSchema: {
+              jsonSchema: {
+                properties: {
+                  location: { type: 'string' },
+                },
+                required: ['location'],
+              },
+            },
+          },
+        },
+      };
+
+      const response = {
+        messages: [
+          {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool-call',
+                toolCallId: 'call_N4fi1B1aOpk0VnxGDn4HT9jX',
+                toolName: 'weather',
+                input: { location: 'Antarctica' },
+              },
+            ],
+          },
+          {
+            role: 'tool',
+            content: [
+              {
+                type: 'tool-result',
+                toolCallId: 'call_N4fi1B1aOpk0VnxGDn4HT9jX',
+                toolName: 'weather',
+                input: { location: 'Antarctica' },
+                output: { location: 'Antarctica', temperature: 65 },
+              },
+            ],
+          },
+        ],
+      };
+
+      const result = await converter.convertToQualifireEvaluationRequest(
+        request,
+        response
+      );
+
+      // Should have system, user, and 2 tool-related messages
+      expect(result.messages?.length).toBe(4);
+
+      // Should have system message
+      expect(result.messages?.[0]?.role).toBe('system');
+      expect(result.messages?.[0]?.content).toBe(
+        'You are a helpful assistant that can use tools.'
+      );
+
+      // Should have user message
+      expect(result.messages?.[1]?.role).toBe('user');
+      expect(result.messages?.[1]?.content).toBe(
+        'What is the weather in Antarctica?'
+      );
+
+      // Should have assistant message with tool-call
+      expect(result.messages?.[2]?.role).toBe('assistant');
+      expect(result.messages?.[2]?.tool_calls).toBeDefined();
+      expect(result.messages?.[2]?.tool_calls?.length).toBe(1);
+      expect(result.messages?.[2]?.tool_calls?.[0]?.name).toBe('weather');
+      expect(result.messages?.[2]?.tool_calls?.[0]?.arguments).toEqual({
+        location: 'Antarctica',
+      });
+      expect(result.messages?.[2]?.tool_calls?.[0]?.id).toBe(
+        'call_N4fi1B1aOpk0VnxGDn4HT9jX'
+      );
+
+      // Should have tool message with tool-result
+      expect(result.messages?.[3]?.role).toBe('tool');
+      expect(result.messages?.[3]?.content).toBe(
+        '{"location":"Antarctica","temperature":65}'
+      );
+      expect(result.messages?.[3]?.tool_calls).toBeDefined();
+      expect(result.messages?.[3]?.tool_calls?.length).toBe(1);
+      expect(result.messages?.[3]?.tool_calls?.[0]?.name).toBe('weather');
+      expect(result.messages?.[3]?.tool_calls?.[0]?.arguments).toEqual({
+        location: 'Antarctica',
+      });
+      expect(result.messages?.[3]?.tool_calls?.[0]?.id).toBe(
+        'call_N4fi1B1aOpk0VnxGDn4HT9jX'
+      );
+
+      // Should have available tools
+      expect(result.available_tools).toBeDefined();
+      expect(result.available_tools?.length).toBe(1);
+      expect(result.available_tools?.[0]?.name).toBe('weather');
+    });
   });
 });
