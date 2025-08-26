@@ -6,7 +6,6 @@ import {
 } from '../../types';
 import {
   CanonicalEvaluationStrategy,
-  convertResponseMessagesToLLMMessages,
   convertToolsToLLMDefinitions,
 } from '../canonical';
 
@@ -455,4 +454,124 @@ export class OpenAICanonicalEvaluationStrategy
 
     return messages;
   }
+}
+
+// OpenAI-specific function to convert Response API messages to LLM messages
+function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
+  const extracted_messages: LLMMessage[] = [];
+
+  for (const message of messages) {
+    // Handle OpenAI Response API function_call type
+    if (message.type == 'function_call') {
+      extracted_messages.push({
+        role: 'assistant' as const,
+        tool_calls: [
+          {
+            name: message.name,
+            arguments: JSON.parse(message.arguments),
+            id: message.call_id,
+          },
+        ],
+      });
+      continue;
+    }
+
+    // Handle simple string content messages
+    if (typeof message.content === 'string') {
+      extracted_messages.push({
+        role: message.role,
+        content: message.content,
+      });
+      continue;
+    }
+
+    const content: string[] = [];
+    let role: string = message.role;
+    let messageContents = [];
+
+    if (message.content) {
+      messageContents = message.content;
+    } else if (message.parts) {
+      messageContents = message.parts;
+    } else {
+      continue;
+    }
+
+    for (const contentElement of messageContents) {
+      // Handle OpenAI Response API specific content types
+      switch (contentElement.type) {
+        case 'output_text':
+          role = 'tool' as const; // This is an output of a tool call so it's made by a tool.
+          content.push(contentElement.text);
+          break;
+        case 'text':
+        case 'input_text':
+          content.push(contentElement.text);
+          break;
+        default:
+          // Handle message-level types for OpenAI Response API
+          switch (message.type) {
+            case 'message':
+              // Already handled above in the contentElement switch
+              break;
+            case 'web_search_call':
+              extracted_messages.push({
+                role: 'assistant' as const,
+                tool_calls: [
+                  {
+                    name: message.name,
+                    arguments: {},
+                    id: message.id,
+                  },
+                ],
+              });
+              break;
+            case 'file_search_call':
+              const toolArguments = message.queries
+                ? { queries: message?.queries }
+                : {};
+              extracted_messages.push({
+                role: 'assistant' as const,
+                tool_calls: [
+                  {
+                    name: message.name,
+                    arguments: toolArguments,
+                    id: message.id,
+                  },
+                ],
+              });
+              break;
+            case 'function_call':
+              extracted_messages.push({
+                role: 'assistant' as const,
+                tool_calls: [
+                  {
+                    name: message.name,
+                    arguments: JSON.parse(message.arguments),
+                    id: message.id,
+                  },
+                ],
+              });
+              break;
+            default:
+              throw new Error(
+                'Invalid OpenAI Response API output: message - ' +
+                  JSON.stringify(message) +
+                  ' contentElement - ' +
+                  JSON.stringify(contentElement)
+              );
+          }
+      }
+    }
+
+    // Add accumulated content message if we have content
+    if (content.length > 0) {
+      extracted_messages.push({
+        role,
+        content: content.join(' '),
+      });
+    }
+  }
+
+  return extracted_messages;
 }

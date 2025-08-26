@@ -181,7 +181,6 @@ describe('OpenAICanonicalEvaluationStrategy', () => {
             role: 'assistant',
             content:
               'Once upon a moonlit night, a gentle unicorn with a silver mane danced through a starlit meadow, spreading magic and wonder to all who dreamed.',
-            tool_calls: [],
           },
         ],
         available_tools: [],
