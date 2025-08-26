@@ -1,4 +1,4 @@
-import { EvaluationRequestSchema } from '../src/types';
+import { EvaluationProxyAPIRequestSchema } from '../src/types';
 
 const _test_llm_messages = [
   {
@@ -73,9 +73,13 @@ describe('EvaluationRequestSchema', () => {
         };
 
         if (shouldError) {
-          expect(() => EvaluationRequestSchema.parse(payload)).toThrow();
+          expect(() =>
+            EvaluationProxyAPIRequestSchema.parse(payload)
+          ).toThrow();
         } else {
-          expect(() => EvaluationRequestSchema.parse(payload)).not.toThrow();
+          expect(() =>
+            EvaluationProxyAPIRequestSchema.parse(payload)
+          ).not.toThrow();
         }
       }
     );
@@ -123,9 +127,13 @@ describe('EvaluationRequestSchema', () => {
         };
 
         if (shouldError) {
-          expect(() => EvaluationRequestSchema.parse(payload)).toThrow();
+          expect(() =>
+            EvaluationProxyAPIRequestSchema.parse(payload)
+          ).toThrow();
         } else {
-          expect(() => EvaluationRequestSchema.parse(payload)).not.toThrow();
+          expect(() =>
+            EvaluationProxyAPIRequestSchema.parse(payload)
+          ).not.toThrow();
         }
       }
     );

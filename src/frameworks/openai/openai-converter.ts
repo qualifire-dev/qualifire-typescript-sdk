@@ -1,5 +1,5 @@
 import {
-  EvaluationRequestV1,
+  EvaluationProxyAPIRequest,
   LLMMessage,
   LLMToolDefinition,
 } from '../../types';
@@ -29,7 +29,7 @@ export class OpenAICanonicalEvaluationStrategy
     > {
   async convertRequestForChatCompletions(
     request: OpenAICanonicalEvaluationStrategyRequest
-  ): Promise<EvaluationRequestV1> {
+  ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 
@@ -59,7 +59,7 @@ export class OpenAICanonicalEvaluationStrategy
 
   async convertRequestForResponse(
     request: OpenAICanonicalEvaluationStrategyRequest
-  ): Promise<EvaluationRequestV1> {
+  ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 
@@ -94,7 +94,7 @@ export class OpenAICanonicalEvaluationStrategy
 
   async convertRequest(
     request: OpenAICanonicalEvaluationStrategyRequest
-  ): Promise<EvaluationRequestV1> {
+  ): Promise<EvaluationProxyAPIRequest> {
     // Determine which API is being used and call the appropriate method
     if (request?.messages) {
       return this.convertRequestForChatCompletions(request);
@@ -119,7 +119,7 @@ export class OpenAICanonicalEvaluationStrategy
   async convertToQualifireEvaluationRequest(
     request: OpenAICanonicalEvaluationStrategyRequest,
     response: OpenAICanonicalEvaluationStrategyResponse
-  ): Promise<EvaluationRequestV1> {
+  ): Promise<EvaluationProxyAPIRequest> {
     let {
       messages: requestMessages,
       available_tools: requestAvailableTools,

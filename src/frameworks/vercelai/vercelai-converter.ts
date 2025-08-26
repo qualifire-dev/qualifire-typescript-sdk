@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import {
-  EvaluationRequestV1,
+  EvaluationProxyAPIRequest,
   LLMMessage,
   LLMToolDefinition,
 } from '../../types';
@@ -14,7 +14,7 @@ export class VercelAICanonicalEvaluationStrategy
   async convertToQualifireEvaluationRequest(
     request: any,
     response: any
-  ): Promise<EvaluationRequestV1> {
+  ): Promise<EvaluationProxyAPIRequest> {
     let {
       messages: requestMessages,
       available_tools: requestAvailableTools,
@@ -40,7 +40,7 @@ export class VercelAICanonicalEvaluationStrategy
     };
   }
 
-  async convertRequest(request: any): Promise<EvaluationRequestV1> {
+  async convertRequest(request: any): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     let available_tools: LLMToolDefinition[] = [];
 

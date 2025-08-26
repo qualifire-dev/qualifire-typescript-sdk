@@ -3,11 +3,11 @@ import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-co
 import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
-import { EvaluationRequestV1, type EvaluationRequestV2, type EvaluationResponse, type Framework } from './types';
+import { EvaluationProxyAPIRequest, EvaluationProxyAPIRequestSchema, EvaluationRequestV2Schema, type EvaluationRequestV2, type EvaluationResponse, type Framework } from './types';
 
 export type {
   EvaluationRequestV2,
-  EvaluationRequestV1,
+  EvaluationProxyAPIRequest,
   EvaluationResponse, Framework, LLMMessage
 } from './types';
 
@@ -95,38 +95,43 @@ export class Qualifire {
    * });
    * ```
    */
-  evaluate = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
+  evaluate = async (evaluationRequest: EvaluationProxyAPIRequest | EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
     // If messages are provided directly, use them as-is without conversion
-    if (EvaluationRequestV2.messages && EvaluationRequestV2.messages.length > 0) {
-      return this.evaluateWithBackwardCompatibility(EvaluationRequestV2);
+    const parseEvaluationProxyAPIRequest = EvaluationProxyAPIRequestSchema.safeParse(evaluationRequest)
+    if (parseEvaluationProxyAPIRequest.success) {
+      return this.evaluateWithBackwardCompatibility(parseEvaluationProxyAPIRequest.data as EvaluationProxyAPIRequest);
     }
 
-    // Use framework converters for request/response
-    return this.evaluateWithConverters(EvaluationRequestV2);
+    const parseEvaluationRequestResultV2 = EvaluationRequestV2Schema.safeParse(evaluationRequest)
+    if (parseEvaluationRequestResultV2.success) {
+      return this.evaluateWithConverters(parseEvaluationRequestResultV2.data as EvaluationRequestV2);
+    }
+    
+    throw new Error(`Invalid evaluation request format: ${JSON.stringify(evaluationRequest)}`);
   };
 
   /**
    * Evaluates using direct messages without conversion (overrides request/response if both are provided)
    */
-  private evaluateWithBackwardCompatibility = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
+  private evaluateWithBackwardCompatibility = async (evaluationProxyAPIRequest: EvaluationProxyAPIRequest): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {
-      input: EvaluationRequestV2.input,
-      output: EvaluationRequestV2.output,
-      messages: EvaluationRequestV2.messages,
-      available_tools: EvaluationRequestV2.available_tools,
-      dangerous_content_check: EvaluationRequestV2.dangerous_content_check,
-      grounding_check: EvaluationRequestV2.grounding_check ,
-      hallucinations_check: EvaluationRequestV2.hallucinations_check,
-      harassment_check: EvaluationRequestV2.harassment_check,
-      hate_speech_check: EvaluationRequestV2.hate_speech_check,
-      instructions_following_check: EvaluationRequestV2.instructions_following_check,
-      pii_check: EvaluationRequestV2.pii_check,
-      prompt_injections: EvaluationRequestV2.prompt_injections,
-      sexual_content_check: EvaluationRequestV2.sexual_content_check,
-      syntax_checks: EvaluationRequestV2.syntax_checks,
-      tool_selection_quality_check: EvaluationRequestV2.tool_selection_quality_check,
-      assertions: EvaluationRequestV2.assertions,
+      input: evaluationProxyAPIRequest.input,
+      output: evaluationProxyAPIRequest.output,
+      messages: evaluationProxyAPIRequest.messages,
+      available_tools: evaluationProxyAPIRequest.available_tools,
+      dangerous_content_check: evaluationProxyAPIRequest.dangerous_content_check,
+      grounding_check: evaluationProxyAPIRequest.grounding_check ,
+      hallucinations_check: evaluationProxyAPIRequest.hallucinations_check,
+      harassment_check: evaluationProxyAPIRequest.harassment_check,
+      hate_speech_check: evaluationProxyAPIRequest.hate_speech_check,
+      instructions_following_check: evaluationProxyAPIRequest.instructions_following_check,
+      pii_check: evaluationProxyAPIRequest.pii_check,
+      prompt_injections: evaluationProxyAPIRequest.prompt_injections,
+      sexual_content_check: evaluationProxyAPIRequest.sexual_content_check,
+      syntax_checks: evaluationProxyAPIRequest.syntax_checks,
+      tool_selection_quality_check: evaluationProxyAPIRequest.tool_selection_quality_check,
+      assertions: evaluationProxyAPIRequest.assertions,
     };
 
     const headers = {

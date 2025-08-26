@@ -1,5 +1,5 @@
 import {
-  EvaluationRequestV1,
+  EvaluationProxyAPIRequest,
   LLMMessage,
   LLMToolDefinition,
 } from '../../types';
@@ -13,7 +13,7 @@ export class ClaudeCanonicalEvaluationStrategy
   async convertToQualifireEvaluationRequest(
     request: any,
     response: any
-  ): Promise<EvaluationRequestV1> {
+  ): Promise<EvaluationProxyAPIRequest> {
     let {
       messages: requestMessages,
       available_tools: requestAvailableTools,
@@ -39,7 +39,7 @@ export class ClaudeCanonicalEvaluationStrategy
     };
   }
 
-  async convertRequest(request: any): Promise<EvaluationRequestV1> {
+  async convertRequest(request: any): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
     const availableTools: LLMToolDefinition[] = [];
 

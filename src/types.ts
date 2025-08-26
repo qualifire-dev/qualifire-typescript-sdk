@@ -63,15 +63,15 @@ const SyntaxCheckArgsSchema = z.object({
   args: z.string(),
 });
 
-export const EvaluationRequestModernSchema = z.object({
+export const EvaluationRequestV2Schema = z.object({
   framework: z.enum(FrameworkEnum),
   request: z.any().optional(),
   response: z.any().optional(),
-  /** @deprecated Use request/response with framework converters instead */
+  /** @deprecated Use request/response instead */
   input: z.string().optional(),
-  /** @deprecated Use request/response with framework converters instead */
+  /** @deprecated Use request/response instead */
   output: z.string().optional(),
-  /** @deprecated Use request/response with framework converters instead */
+  /** @deprecated Use request/response instead */
   messages: z.array(LLMMessageSchema).optional(),
   dangerousContentCheck: z.boolean().default(false).optional(),
   groundingCheck: z.boolean().default(false).optional(),
@@ -111,7 +111,7 @@ export const EvaluationRequestModernSchema = z.object({
   tool_selection_quality_check: z.boolean().default(false).optional(),
 });
 
-export const EvaluationRequestSchema = z
+export const EvaluationProxyAPIRequestSchema = z
   .object({
     input: z.string().optional(),
     output: z.string().optional(),
@@ -191,8 +191,10 @@ const EvaluationResponseSchema = z.object({
   status: z.string(),
 });
 
-export type EvaluationRequestV1 = z.input<typeof EvaluationRequestSchema>;
+export type EvaluationProxyAPIRequest = z.input<
+  typeof EvaluationProxyAPIRequestSchema
+>;
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
 export type LLMToolDefinition = z.infer<typeof LLMToolDefinitionSchema>;
 export type LLMToolCall = z.infer<typeof LLMToolCallSchema>;
-export type EvaluationRequestV2 = z.infer<typeof EvaluationRequestModernSchema>;
+export type EvaluationRequestV2 = z.infer<typeof EvaluationRequestV2Schema>;
