@@ -4,12 +4,8 @@ import {
   LLMToolCall,
   LLMToolDefinition,
 } from '../../types';
-import {
-  CanonicalEvaluationStrategy,
-  convertToolsToLLMDefinitions,
-} from '../canonical';
+import { CanonicalEvaluationStrategy } from '../canonical';
 
-import type { GenerateTextResult, StreamTextResult, ToolSet } from 'ai';
 import {
   ChatCompletion,
   ChatCompletionChunk,
@@ -19,7 +15,6 @@ import {
   ChatCompletionCreateParamsStreaming,
   ChatCompletionCreateParamsBase,
 } from 'openai/resources/chat/completions/completions';
-import { Completion } from 'openai/resources/completions';
 import {
   Response,
   ResponseCreateParamsNonStreaming,
@@ -27,10 +22,6 @@ import {
   ResponseCreateParamsBase,
   ResponseStreamEvent,
 } from 'openai/resources/responses/responses';
-
-type OpenAIChatCompletionsResponse =
-  | ChatCompletion
-  | Array<ChatCompletionChunk>;
 
 type OpenAIResponseCreateRequest =
   | ResponseCreateParamsNonStreaming
@@ -109,7 +100,7 @@ export class OpenAICanonicalEvaluationStrategy
     if (request.messages) {
       return this.convertRequestForChatCompletions(request);
     } else if (request?.instructions || request?.input) {
-      return this.convertRequestForResponse(request);
+      return this.convertRequestForResponseAPI(request);
     } else {
       throw new Error('Invalid request: ' + JSON.stringify(request));
     }
@@ -172,7 +163,7 @@ export class OpenAICanonicalEvaluationStrategy
     return convertedMessages;
   }
 
-  async convertRequestForResponse(
+  async convertRequestForResponseAPI(
     request: OpenAIResponseCreateRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
@@ -192,7 +183,9 @@ export class OpenAICanonicalEvaluationStrategy
           content: request.input,
         });
       } else {
-        messages.push(...convertResponseMessagesToLLMMessages(request.input));
+        messages.push(
+          ...convertResponsesAPIMessagesToLLMMessages(request.input)
+        );
       }
     }
 
@@ -282,7 +275,7 @@ export class OpenAICanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    // Initialize accumulator for Response API streaming content
+    // Initialize accumulator for Responses API streaming content
     let accumulatedContent = '';
     let messageRole: string | undefined;
 
@@ -360,31 +353,6 @@ export class OpenAICanonicalEvaluationStrategy
           }
         }
       }
-
-      // // TODO: remove
-      // // Handle non-delta format
-      // else if (firstChoice.message?.role) {
-      //   const message: LLMMessage = {
-      //     role: firstChoice.message.role,
-      //   };
-      //   if (firstChoice.message?.content) {
-      //     message.content = firstChoice.message.content;
-      //   }
-      //   if (firstChoice.message?.tool_calls) {
-      //     message.tool_calls = firstChoice.message.tool_calls.map(
-      //       (tool_call: any) => ({
-      //         name: tool_call.function.name,
-      //         arguments: tool_call.function.arguments
-      //           ? JSON.parse(tool_call.function.arguments)
-      //           : {},
-      //         id: tool_call.id,
-      //       })
-      //     );
-      //   }
-      //   if (message.content || message.tool_calls) {
-      //     messages.push(message);
-      //   }
-      // }
     }
 
     return { accumulatedContent, messageRole };
@@ -400,18 +368,18 @@ export class OpenAICanonicalEvaluationStrategy
   } | null {
     // Handle legacy format - direct output
     if (chunk.output) {
-      messages.push(...convertResponseMessagesToLLMMessages(chunk.output));
+      messages.push(...convertResponsesAPIMessagesToLLMMessages(chunk.output));
       return null;
     }
 
     // Handle streaming response completion
     if (
       chunk.sequence_number &&
-      chunk.type == 'response.completed' &&
+      chunk.type === 'response.completed' &&
       chunk.response?.output
     ) {
       messages.push(
-        ...convertResponseMessagesToLLMMessages(chunk.response.output)
+        ...convertResponsesAPIMessagesToLLMMessages(chunk.response.output)
       );
       return null;
     }
@@ -420,7 +388,7 @@ export class OpenAICanonicalEvaluationStrategy
     if (chunk.type === 'response.output_text.delta' && chunk.delta) {
       return {
         accumulatedContent: chunk.delta,
-        messageRole: 'assistant', // Response API messages are always from assistant
+        messageRole: 'assistant', // Responses API messages are always from assistant
       };
     }
 
@@ -488,10 +456,12 @@ export class OpenAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = [];
 
     if (response.output) {
-      messages.push(...convertResponseMessagesToLLMMessages(response.output));
+      messages.push(
+        ...convertResponsesAPIMessagesToLLMMessages(response.output)
+      );
     } else {
       throw new Error(
-        'Invalid response API response: ' + JSON.stringify(response)
+        'Invalid Responses API response: ' + JSON.stringify(response)
       );
     }
 
@@ -499,13 +469,15 @@ export class OpenAICanonicalEvaluationStrategy
   }
 }
 
-// OpenAI-specific function to convert Response API messages to LLM messages
-function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
+// OpenAI-specific function to convert Responses API messages to LLM messages
+function convertResponsesAPIMessagesToLLMMessages(
+  messages: any[]
+): LLMMessage[] {
   const extracted_messages: LLMMessage[] = [];
 
   for (const message of messages) {
-    // Handle OpenAI Response API function_call type
-    if (message.type == 'function_call') {
+    // Handle OpenAI Responses API function_call type
+    if (message.type === 'function_call') {
       extracted_messages.push({
         role: 'assistant' as const,
         tool_calls: [
@@ -541,10 +513,10 @@ function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
     }
 
     for (const contentElement of messageContents) {
-      // Handle OpenAI Response API specific content types
+      // Handle OpenAI Responses API specific content types
       switch (contentElement.type) {
         case 'output_text':
-          role = 'tool' as const; // This is an output of a tool call so it's made by a tool.
+          role = 'assistant' as const;
           content.push(contentElement.text);
           break;
         case 'text':
@@ -552,7 +524,7 @@ function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
           content.push(contentElement.text);
           break;
         default:
-          // Handle message-level types for OpenAI Response API
+          // Handle message-level types for OpenAI Responses API
           switch (message.type) {
             case 'message':
               // Already handled above in the contentElement switch
@@ -598,7 +570,7 @@ function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
               break;
             default:
               throw new Error(
-                'Invalid OpenAI Response API output: message - ' +
+                'Invalid OpenAI Responses API output: message - ' +
                   JSON.stringify(message) +
                   ' contentElement - ' +
                   JSON.stringify(contentElement)
@@ -617,4 +589,45 @@ function convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
   }
 
   return extracted_messages;
+}
+export function convertToolsToLLMDefinitions(
+  tools: unknown[]
+): LLMToolDefinition[] {
+  const results: LLMToolDefinition[] = [];
+
+  for (const tool of tools) {
+    // Check if it's a valid tool object
+    if (!tool || typeof tool !== 'object') {
+      continue;
+    }
+
+    const toolObj = tool as any;
+
+    // Handle FunctionTool type
+    if (toolObj.type === 'function' && toolObj.function) {
+      const functionDef = toolObj.function;
+
+      const llmTool: LLMToolDefinition = {
+        name: functionDef.name,
+        description: functionDef.description,
+        parameters: functionDef.parameters,
+      };
+
+      results.push(llmTool);
+    } else if (toolObj.name && typeof toolObj.name === 'string') {
+      const llmTool: LLMToolDefinition = {
+        name: toolObj.name,
+        description: toolObj.description,
+        parameters:
+          toolObj.parameters?.properties ||
+          toolObj.parameters ||
+          toolObj.args ||
+          {},
+      };
+
+      results.push(llmTool);
+    }
+  }
+
+  return results;
 }

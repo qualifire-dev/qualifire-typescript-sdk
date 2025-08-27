@@ -57,7 +57,7 @@ export class GeminiAICanonicalEvaluationStrategy
             available_tools.push({
               name: functionDeclaration.name,
               description: functionDeclaration.description,
-              parameters: functionDeclaration.parameters.properties,
+              parameters: functionDeclaration.parameters,
             });
           }
         }
@@ -110,46 +110,16 @@ export class GeminiAICanonicalEvaluationStrategy
     response: GeminiAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
-    let accumulatedText = '';
-    let currentRole = '';
 
     for (const chunk of response) {
       if (chunk?.candidates && chunk.candidates.length > 0) {
-        const candidate = chunk.candidates[0];
+        const candidate = chunk.candidates[0]; // we currently only support one response message
 
-        // Check if role has changed
-        if (candidate.content?.role && candidate.content.role !== currentRole) {
-          // If we have accumulated text and role changed, create a message
-          if (accumulatedText && currentRole) {
-            const role = currentRole === 'model' ? 'assistant' : currentRole;
-            messages.push({
-              role,
-              content: accumulatedText.trim(),
-            });
-          }
-          // Reset for new role
-          accumulatedText = '';
-          currentRole = candidate.content.role;
-        }
-
-        // Accumulate text from parts
-        if (candidate.content?.parts) {
-          for (const part of candidate.content.parts) {
-            if (part.text) {
-              accumulatedText += part.text;
-            }
-          }
+        const message = convertContentToLLMMessage(candidate.content);
+        if (message) {
+          messages.push(message);
         }
       }
-    }
-
-    // Add final accumulated message if we have content
-    if (accumulatedText && currentRole) {
-      const role = currentRole === 'model' ? 'assistant' : currentRole;
-      messages.push({
-        role,
-        content: accumulatedText.trim(),
-      });
     }
 
     return messages;
@@ -158,11 +128,6 @@ export class GeminiAICanonicalEvaluationStrategy
   private async handleNonStreamingResponse(
     response: GeminiAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
-    // // Handle nested response structure (VertexAI format)
-    // if (response?.response?.candidates) {
-    //   return this.handleResponse(response.response);
-    // }
-    // Handle direct candidates structure
     return this.handleResponse(response);
   }
 }
@@ -176,44 +141,21 @@ function convertContentToLLMMessage(content: any): LLMMessage | null {
   let role = content.role;
   let textContent: string[] = [];
   let tool_calls: LLMToolCall[] = [];
-  let toolResponseContent: string[] = [];
-  let hasValidContent = false;
 
   // Process all parts and aggregate them
   for (const part of content.parts) {
     if (part.text) {
-      hasValidContent = true;
       textContent.push(part.text);
-    }
-
-    if (part.functionCall) {
-      hasValidContent = true;
+    } else if (part.functionCall) {
       role = 'assistant'; // Function calls are always from assistant
       tool_calls.push({
         name: part.functionCall.name,
         arguments: part.functionCall.args,
-        id: `gemini_${Date.now()}_${Math.random()}`, // Generate unique ID
       });
-    }
-
-    if (part.functionResponse) {
-      hasValidContent = true;
+    } else if (part.functionResponse) {
       role = 'tool';
-      toolResponseContent.push(
-        JSON.stringify(part.functionResponse.response?.result)
-      );
+      textContent.push(JSON.stringify(part.functionResponse.response?.result));
     }
-
-    if (part.thoughtSignature) {
-      hasValidContent = true;
-      // Handle thought signature parts (internal reasoning)
-      // These are typically not meant for end users, so we can skip them
-    }
-  }
-
-  if (!hasValidContent) {
-    role = 'assistant';
-    textContent = [JSON.stringify(content)];
   }
 
   // Determine final role
@@ -223,8 +165,6 @@ function convertContentToLLMMessage(content: any): LLMMessage | null {
   let finalContent: string | undefined;
   if (textContent.length > 0) {
     finalContent = textContent.join(' ');
-  } else if (toolResponseContent.length > 0) {
-    finalContent = toolResponseContent.join(' ');
   }
 
   return {

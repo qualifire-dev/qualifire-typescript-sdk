@@ -60,7 +60,7 @@ export class Qualifire {
    * Evaluates the output of a model against a set of criteria.
    *
    * This function supports two modes:
-   * 1. Direct messages mode: If `messages` are provided, they are sent as-is to the proxy without conversion
+   * 1. Direct messages mode: If `messages`, `input` or `output` are provided, they are sent as-is to the proxy without conversion
    * 2. Framework converter mode: If `request` and `response` are provided, they are converted using the specified framework converter
    * 
    * Note: If both `messages` and `request`/`response` are provided, `messages` takes precedence.
@@ -74,7 +74,6 @@ export class Qualifire {
    * 
    * // Direct messages mode (no conversion)
    * const response1 = await qualifire.evaluate({
-   *   framework: 'openai',
    *   messages: [
    *     { role: 'user', content: 'What is the capital of France?' },
    *     { role: 'assistant', content: 'Paris' }

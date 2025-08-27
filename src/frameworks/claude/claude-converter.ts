@@ -5,10 +5,7 @@ import {
   LLMToolDefinition,
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
-import {
-  type MessageCreateParams,
-  type MessageStreamParams,
-} from '@anthropic-ai/sdk/resources';
+import { type MessageCreateParams, type MessageStreamParams} from '@anthropic-ai/sdk/resources';
 import { Message } from '@anthropic-ai/sdk/resources';
 import { RawMessageStreamEvent, MessageStreamEvent } from '@anthropic-ai/sdk/resources/messages';
 
@@ -32,7 +29,7 @@ export class ClaudeCanonicalEvaluationStrategy
     const {
       messages: requestMessages,
       available_tools: requestAvailableTools,
-    } = await this.convertRequest(request);
+    } = this.convertRequest(request);
 
     const messages: LLMMessage[] = requestMessages || [];
     const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
@@ -54,7 +51,7 @@ export class ClaudeCanonicalEvaluationStrategy
     };
   }
 
-  async convertRequest(request: any): Promise<EvaluationProxyAPIRequest> {
+  convertRequest(request: any): EvaluationProxyAPIRequest {
     const messages: LLMMessage[] = [];
     const availableTools: LLMToolDefinition[] = [];
 

@@ -198,7 +198,7 @@ export class VercelAICanonicalEvaluationStrategy
     return results;
   }
 
-  // VercelAI-specific function to convert Response API messages to LLM messages
+  // VercelAI-specific function to convert Responses API messages to LLM messages
   private convertRequestMessageToLLMMessages(
     messages: ModelMessage[]
   ): LLMMessage[] {
@@ -266,7 +266,7 @@ export class VercelAICanonicalEvaluationStrategy
         case 'tool':
           const toolMessage = message as ToolModelMessage;
           extracted_messages.push({
-            role: 'tool-result',
+            role: 'tool',
             tool_calls: toolMessage.content.map(part => {
               return {
                 name: part.toolName,
