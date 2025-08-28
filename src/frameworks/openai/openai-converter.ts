@@ -12,6 +12,9 @@ import {
   type ChatCompletionMessageParam,
   type ChatCompletionDeveloperMessageParam,
   type ChatCompletionContentPartText,
+  type ChatCompletionAssistantMessageParam,
+  type ChatCompletionToolMessageParam,
+  type ChatCompletionContentPartRefusal,
 } from 'openai/resources/chat/completions';
 import {
   ChatCompletionCreateParamsNonStreaming,
@@ -145,10 +148,10 @@ export class OpenAICanonicalEvaluationStrategy
         case 'developer':
         case 'user':
           let textMessage = message as ChatCompletionDeveloperMessageParam // This works the same for System user and developer. Used this type just out of comfort
-          if (typeof developerMessage.content === 'string') {
-            content = developerMessage.content as string;
+          if (typeof textMessage.content === 'string') {
+            content = textMessage.content as string;
           } else {
-            content = (developerMessage.content as ChatCompletionContentPartText[]).filter((part) => part.type === 'text').map((part) => part.text).join('')
+            content = (textMessage.content as ChatCompletionContentPartText[]).filter((part) => part.type === 'text').map((part) => part.text).join('')
           }
           break;
         case 'assistant':
@@ -157,7 +160,7 @@ export class OpenAICanonicalEvaluationStrategy
             if (typeof assistantMessage.content === 'string') {
               content = assistantMessage.content;
             } else {
-              content = (assistantMessage.content as Array<ChatCompletionContentPartText | ChatCompletionContentPartRefusal>).filter((part) => part.type === 'text').map((part) => part.text).join('')
+              content = (assistantMessage.content as Array<ChatCompletionContentPartText | ChatCompletionContentPartRefusal>).filter((part) => part.type === 'text').map((part) => (part as ChatCompletionContentPartText).text).join('')
             }
           }
           break;
@@ -167,13 +170,15 @@ export class OpenAICanonicalEvaluationStrategy
             if (typeof toolMessage.content === 'string') {
               content = toolMessage.content;
             } else {
-              content = (toolMessage.content as Array<ChatCompletionContentPartText | ChatCompletionContentPartRefusal>).filter((part) => part.type === 'text').map((part) => part.text).join('')
+              content = (toolMessage.content as Array<ChatCompletionContentPartText>).filter((part) => part.type === 'text').map((part) => part.text).join('')
             }
           }
-          tool_calls = [LLMToolCall({
+          tool_calls = [{
             // There are no tool name or arguments in the tool message: ChatCompletionToolMessageParam
             id: toolMessage.tool_call_id,
-          })]
+            name: "",
+            arguments: {},
+          }]
           break;
 
         default:
