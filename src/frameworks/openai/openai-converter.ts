@@ -428,18 +428,6 @@ export class OpenAICanonicalEvaluationStrategy
       return null;
     }
 
-    // Handle streaming response completion
-    if (
-      chunk.sequence_number &&
-      chunk.type === 'response.completed' &&
-      chunk.response?.output
-    ) {
-      messages.push(
-        ...convertResponsesAPIMessagesToLLMMessages(chunk.response.output)
-      );
-      return null;
-    }
-
     // Handle new streaming format - text deltas
     if (chunk.type === 'response.output_text.delta' && chunk.delta) {
       return {
