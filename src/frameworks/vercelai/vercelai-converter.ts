@@ -108,7 +108,7 @@ export class VercelAICanonicalEvaluationStrategy
     if (mergedContent.length > 0) {
       messages.push({
         role: 'assistant',
-        content: mergedContent.join(''),
+        content: mergedContent.join('').trim(),
       });
     }
 
@@ -234,7 +234,10 @@ export class VercelAICanonicalEvaluationStrategy
             ) as TextPart[];
             extracted_messages.push({
               role: 'user',
-              content: textParts.map(part => part.text).join(''),
+              content: textParts
+                .map(part => part.text)
+                .join('')
+                .trim(),
             });
           }
           break;
@@ -254,7 +257,10 @@ export class VercelAICanonicalEvaluationStrategy
             ) as ToolCallPart[];
             extracted_messages.push({
               role: 'assistant',
-              content: textParts.map(part => part.text).join(''),
+              content: textParts
+                .map(part => part.text)
+                .join('')
+                .trim(),
               tool_calls: toolCalls.map(part => ({
                 name: part.toolName,
                 arguments: JSON.parse(part.input as string),

@@ -101,7 +101,7 @@ export class ClaudeCanonicalEvaluationStrategy
 
     messages.push({
       role: 'assistant',
-      content: accumulatedContent.join(''),
+      content: accumulatedContent.join('').trim(),
     });
 
     return messages;
@@ -206,9 +206,6 @@ export class ClaudeCanonicalEvaluationStrategy
 
 function extractContentFromRawMessageStreamEvent(event: RawMessageStreamEvent): string {
   switch (event.type) {
-    // case 'message_start':
-    //   const textContents = event.message.content.filter((content) => content.type === 'text');
-    //   return textContents.map((content) => content.text).join('');
     case 'content_block_start':
       if (event.content_block.type === 'text') {
         return event.content_block.text;

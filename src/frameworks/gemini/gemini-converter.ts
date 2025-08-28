@@ -88,17 +88,22 @@ export class GeminiAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = [];
 
     // Handle response candidates
-    if (response?.candidates) {
-      for (const candidate of response.candidates) {
-        if (
-          candidate.content?.role &&
-          candidate.content?.parts &&
-          candidate.content.parts.length > 0
-        ) {
-          const message = convertContentToLLMMessage(candidate.content);
-          if (message) {
-            messages.push(message);
-          }
+    if (response?.candidates && response.candidates.length > 0) {
+      if (response.candidates.length > 1) {
+        console.warn(
+          'GeminiAI Canonical Evaluation Strategy: Multiple candidates found in response. We only support the first candidate.'
+        );
+      }
+
+      const firstCandidate = response.candidates[0];
+      if (
+        firstCandidate.content?.role &&
+        firstCandidate.content?.parts &&
+        firstCandidate.content.parts.length > 0
+      ) {
+        const message = convertContentToLLMMessage(firstCandidate.content);
+        if (message) {
+          messages.push(message);
         }
       }
     }
@@ -111,15 +116,41 @@ export class GeminiAICanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
+    let accumulatedText: string[] = [];
+    let currentRole = 'assistant';
+
     for (const chunk of response) {
       if (chunk?.candidates && chunk.candidates.length > 0) {
-        const candidate = chunk.candidates[0]; // we currently only support one response message
+        if (chunk.candidates.length > 1) {
+          console.warn(
+            'GeminiAI Canonical Evaluation Strategy: Multiple candidates found in streaming response. We only support the first candidate.'
+          );
+        }
+        const firstCandidate = chunk.candidates[0]; // we currently only support one response message
 
-        const message = convertContentToLLMMessage(candidate.content);
-        if (message) {
-          messages.push(message);
+        if (firstCandidate.content?.role) {
+          currentRole = firstCandidate.content.role;
+        }
+
+        if (!firstCandidate.content) {
+          console.warn(
+            'GeminiAI Canonical Evaluation Strategy: Content is missing required fields. Skipping message.'
+          );
+          continue;
+        }
+
+        const message = convertContentToLLMMessage(firstCandidate.content);
+        if (message?.content) {
+          accumulatedText.push(message.content);
         }
       }
+    }
+
+    if (accumulatedText) {
+      messages.push({
+        role: currentRole,
+        content: accumulatedText.join('').trim(),
+      });
     }
 
     return messages;

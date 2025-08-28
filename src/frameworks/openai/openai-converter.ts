@@ -230,7 +230,6 @@ export class OpenAICanonicalEvaluationStrategy
     for (const chunk of responseChunks) {
       const result = this.processChatCompletionsChunk(
         chunk,
-        messages,
         accumulatedContent,
         accumulatedToolCalls,
         messageRole
@@ -303,7 +302,6 @@ export class OpenAICanonicalEvaluationStrategy
 
   private processChatCompletionsChunk(
     chunk: ChatCompletionChunk,
-    messages: LLMMessage[],
     accumulatedContent: string,
     accumulatedToolCalls: any[],
     messageRole: string | undefined
@@ -515,6 +513,7 @@ function convertResponsesAPIMessagesToLLMMessages(
     for (const contentElement of messageContents) {
       // Handle OpenAI Responses API specific content types
       switch (contentElement.type) {
+        case 'function_call_output':
         case 'output_text':
           role = 'assistant' as const;
           content.push(contentElement.text);
