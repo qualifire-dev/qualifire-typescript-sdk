@@ -137,37 +137,32 @@ export class VercelAICanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
     // Handle messages with tool-call and tool-result content
-    if (response.messages && Array.isArray(response.messages)) {
-      for (const message of response.messages) {
-        if (message.content && Array.isArray(message.content)) {
-          for (const contentItem of message.content) {
-            if (contentItem.type === 'tool-call') {
-              // Handle tool-call content
-              messages.push({
-                role: 'assistant',
-                tool_calls: [
-                  {
-                    name: contentItem.toolName,
-                    arguments: contentItem.input,
-                    id: contentItem.toolCallId,
-                  },
-                ],
-              });
-            } else if (contentItem.type === 'tool-result') {
-              // Handle tool-result content
-              messages.push({
-                role: 'tool',
-                content: JSON.stringify(contentItem.output),
-                tool_calls: [
-                  {
-                    name: contentItem.toolName,
-                    arguments: contentItem.input,
-                    id: contentItem.toolCallId,
-                  },
-                ],
-              });
-            }
-          }
+    if (response.content && Array.isArray(response.content)) {
+      for (const message of response.content) {
+        if (message.type === 'tool-call') {
+          // Handle tool-call content
+          messages.push({
+            role: 'assistant',
+            tool_calls: [
+              {
+                name: message.toolName,
+                arguments: message.input,
+                id: message.toolCallId,
+              },
+            ],
+          });
+        } else if (message.type === 'tool-result') {
+          // Handle tool-result content
+          messages.push({
+            role: 'tool',
+            tool_calls: [
+              {
+                name: message.toolName,
+                arguments: message.output,
+                id: message.toolCallId,
+              },
+            ],
+          });
         }
       }
     }
