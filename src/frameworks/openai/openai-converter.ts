@@ -163,6 +163,25 @@ export class OpenAICanonicalEvaluationStrategy
               content = (assistantMessage.content as Array<ChatCompletionContentPartText | ChatCompletionContentPartRefusal>).filter((part) => part.type === 'text').map((part) => (part as ChatCompletionContentPartText).text).join('')
             }
           }
+          if (assistantMessage.tool_calls) {
+            tool_calls = assistantMessage.tool_calls
+            .filter((tool_call) => tool_call.type === "function")
+            .map((tool_call) => {
+                  // It's of type ChatCompletionMessageFunctionToolCall but it's not exported
+                  let toolArguments = {}
+                  try {
+                    toolArguments = JSON.parse(tool_call.function?.arguments)
+                  } catch (error) {
+                    console.debug('Error parsing tool call arguments. Using empty object instead:', error)
+                    toolArguments = {}
+                  }
+                  return {
+                    name: tool_call.function?.name || '',
+                    arguments: toolArguments,
+                    id: tool_call.id,
+                  }
+            }) as LLMToolCall[]
+          }
           break;
         case 'tool':
           let toolMessage = message as ChatCompletionToolMessageParam
