@@ -9,6 +9,9 @@ import { CanonicalEvaluationStrategy } from '../canonical';
 import {
   ChatCompletion,
   ChatCompletionChunk,
+  type ChatCompletionMessageParam,
+  type ChatCompletionDeveloperMessageParam,
+  type ChatCompletionContentPartText,
 } from 'openai/resources/chat/completions';
 import {
   ChatCompletionCreateParamsNonStreaming,
@@ -82,10 +85,10 @@ export class OpenAICanonicalEvaluationStrategy
         messages.push(...chatCompletionsMessages);
       } else {
         response = (response as unknown) as Response;
-        const responseApiMessages = await this.handleResponseApiNonStreaming(
+        const responsesApiMessages = await this.handleResponsesApiNonStreaming(
           response
         );
-        messages.push(...responseApiMessages);
+        messages.push(...responsesApiMessages);
       }
     }
 
@@ -100,7 +103,7 @@ export class OpenAICanonicalEvaluationStrategy
     if (request.messages) {
       return this.convertRequestForChatCompletions(request);
     } else if (request?.instructions || request?.input) {
-      return this.convertRequestForResponseAPI(request);
+      return this.convertRequestForResponsesAPI(request);
     } else {
       throw new Error('Invalid request: ' + JSON.stringify(request));
     }
@@ -113,7 +116,9 @@ export class OpenAICanonicalEvaluationStrategy
     let available_tools: LLMToolDefinition[] = [];
 
     if (request?.messages) {
-      messages.push(...this.convertRequestMessages(request.messages));
+      messages.push(
+        ...this.convertRequestMessagesForChatCompletions(request.messages as ChatCompletionMessageParam[])
+      );
     }
 
     if (request?.tools) {
@@ -126,30 +131,55 @@ export class OpenAICanonicalEvaluationStrategy
     };
   }
 
-  private convertRequestMessages(messages: any[]): LLMMessage[] {
+  private convertRequestMessagesForChatCompletions(
+    messages: ChatCompletionMessageParam[]
+  ): LLMMessage[] {
     const convertedMessages: LLMMessage[] = [];
 
     for (const message of messages) {
       let content: string | undefined;
       let tool_calls: LLMToolCall[] | undefined;
-      if (message.role) {
-        if (message.content) {
-          content = message.content;
-        }
-        if (message.tool_calls && message.tool_calls.length > 0) {
-          tool_calls = [];
-          for (const tool_call of message.tool_calls) {
-            let tool_call_arguments: Record<string, any> = {};
-            if (tool_call.arguments) {
-              tool_call_arguments = JSON.parse(tool_call.arguments);
-            }
-            tool_calls.push({
-              name: tool_call.name,
-              id: tool_call.id,
-              arguments: tool_call_arguments,
-            });
+      
+      switch (message.role) {
+        case 'system':
+        case 'developer':
+        case 'user':
+          let textMessage = message as ChatCompletionDeveloperMessageParam // This works the same for System user and developer. Used this type just out of comfort
+          if (typeof developerMessage.content === 'string') {
+            content = developerMessage.content as string;
+          } else {
+            content = (developerMessage.content as ChatCompletionContentPartText[]).filter((part) => part.type === 'text').map((part) => part.text).join('')
           }
-        }
+          break;
+        case 'assistant':
+          let assistantMessage = message as ChatCompletionAssistantMessageParam
+          if (assistantMessage.content) {
+            if (typeof assistantMessage.content === 'string') {
+              content = assistantMessage.content;
+            } else {
+              content = (assistantMessage.content as Array<ChatCompletionContentPartText | ChatCompletionContentPartRefusal>).filter((part) => part.type === 'text').map((part) => part.text).join('')
+            }
+          }
+          break;
+        case 'tool':
+          let toolMessage = message as ChatCompletionToolMessageParam
+          if (toolMessage.content) {
+            if (typeof toolMessage.content === 'string') {
+              content = toolMessage.content;
+            } else {
+              content = (toolMessage.content as Array<ChatCompletionContentPartText | ChatCompletionContentPartRefusal>).filter((part) => part.type === 'text').map((part) => part.text).join('')
+            }
+          }
+          tool_calls = [LLMToolCall({
+            // There are no tool name or arguments in the tool message: ChatCompletionToolMessageParam
+            id: toolMessage.tool_call_id,
+          })]
+          break;
+
+        default:
+          throw new Error('Invalid request: ' + JSON.stringify(message));
+      }
+      if (content || tool_calls) {
         convertedMessages.push({
           role: message.role,
           content: content,
@@ -163,7 +193,7 @@ export class OpenAICanonicalEvaluationStrategy
     return convertedMessages;
   }
 
-  async convertRequestForResponseAPI(
+  async convertRequestForResponsesAPI(
     request: OpenAIResponseCreateRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
@@ -200,7 +230,7 @@ export class OpenAICanonicalEvaluationStrategy
   }
 
   private async handleStreaming(
-    responseChunks: Array<any> | Array<any>
+    responseChunks: Array<any>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
@@ -213,7 +243,7 @@ export class OpenAICanonicalEvaluationStrategy
     if (firstChunk.choices) {
       return this.handleChatCompletionsStreaming(responseChunks);
     } else {
-      return this.handleResponseApiStreaming(responseChunks);
+      return this.handleResponsesApiStreaming(responseChunks);
     }
   }
 
@@ -234,6 +264,8 @@ export class OpenAICanonicalEvaluationStrategy
         accumulatedToolCalls,
         messageRole
       );
+
+      // Overwriting the accumulated content (Accumulation is done inside the processChatCompletionsChunk)
       accumulatedContent = result.accumulatedContent;
       messageRole = result.messageRole;
     }
@@ -269,7 +301,7 @@ export class OpenAICanonicalEvaluationStrategy
     return messages;
   }
 
-  private async handleResponseApiStreaming(
+  private async handleResponsesApiStreaming(
     responseChunks: Array<ResponseStreamEvent>
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
@@ -279,7 +311,7 @@ export class OpenAICanonicalEvaluationStrategy
     let messageRole: string | undefined;
 
     for (const chunk of responseChunks) {
-      const result = this.processResponseApiChunk(chunk, messages);
+      const result = this.processResponsesApiChunk(chunk, messages);
       if (result) {
         accumulatedContent += result.accumulatedContent;
         if (result.messageRole) {
@@ -341,7 +373,10 @@ export class OpenAICanonicalEvaluationStrategy
               accumulatedToolCalls[toolCall.index].function.name =
                 toolCall.function.name;
             }
-            if (toolCall.function?.arguments) {
+            if (
+              toolCall.function?.arguments &&
+              typeof toolCall.function.arguments === 'string'
+            ) {
               accumulatedToolCalls[toolCall.index].function.arguments +=
                 toolCall.function.arguments;
             }
@@ -356,8 +391,7 @@ export class OpenAICanonicalEvaluationStrategy
     return { accumulatedContent, messageRole };
   }
 
-  private processResponseApiChunk(
-    // chunk: ResponseStreamEvent,
+  private processResponsesApiChunk(
     chunk: any,
     messages: LLMMessage[]
   ): {
@@ -448,7 +482,7 @@ export class OpenAICanonicalEvaluationStrategy
     return messages;
   }
 
-  private async handleResponseApiNonStreaming(
+  private async handleResponsesApiNonStreaming(
     response: Response
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
@@ -513,9 +547,8 @@ function convertResponsesAPIMessagesToLLMMessages(
     for (const contentElement of messageContents) {
       // Handle OpenAI Responses API specific content types
       switch (contentElement.type) {
-        case 'function_call_output':
         case 'output_text':
-          role = 'assistant' as const;
+          role = 'assistant' as const; // TODO: verify this is correct
           content.push(contentElement.text);
           break;
         case 'text':

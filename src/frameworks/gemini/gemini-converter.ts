@@ -90,8 +90,8 @@ export class GeminiAICanonicalEvaluationStrategy
     // Handle response candidates
     if (response?.candidates && response.candidates.length > 0) {
       if (response.candidates.length > 1) {
-        console.warn(
-          'GeminiAI Canonical Evaluation Strategy: Multiple candidates found in response. We only support the first candidate.'
+        console.debug(
+          'Multiple candidates found in the response. Only first candidate is supported.'
         );
       }
 
@@ -122,8 +122,8 @@ export class GeminiAICanonicalEvaluationStrategy
     for (const chunk of response) {
       if (chunk?.candidates && chunk.candidates.length > 0) {
         if (chunk.candidates.length > 1) {
-          console.warn(
-            'GeminiAI Canonical Evaluation Strategy: Multiple candidates found in streaming response. We only support the first candidate.'
+          console.debug(
+            'Multiple candidates found in the response. Only first candidate is supported.'
           );
         }
         const firstCandidate = chunk.candidates[0]; // we currently only support one response message
@@ -133,8 +133,8 @@ export class GeminiAICanonicalEvaluationStrategy
         }
 
         if (!firstCandidate.content) {
-          console.warn(
-            'GeminiAI Canonical Evaluation Strategy: Content is missing required fields. Skipping message.'
+          console.debug(
+            'Content is missing required fields. Skipping message.'
           );
           continue;
         }
@@ -183,7 +183,7 @@ function convertContentToLLMMessage(content: any): LLMMessage | null {
         name: part.functionCall.name,
         arguments: part.functionCall.args,
       });
-    } else if (part.functionResponse) {
+    } else if (part.functionResponse?.response?.result) {
       role = 'tool';
       textContent.push(JSON.stringify(part.functionResponse.response?.result));
     }
