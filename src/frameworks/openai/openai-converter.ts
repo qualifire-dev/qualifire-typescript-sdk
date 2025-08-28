@@ -192,12 +192,6 @@ export class OpenAICanonicalEvaluationStrategy
               content = (toolMessage.content as Array<ChatCompletionContentPartText>).filter((part) => part.type === 'text').map((part) => part.text).join('')
             }
           }
-          tool_calls = [{
-            // There are no tool name or arguments in the tool message: ChatCompletionToolMessageParam
-            id: toolMessage.tool_call_id,
-            name: "",
-            arguments: {},
-          }]
           break;
 
         default:
