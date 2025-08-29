@@ -130,6 +130,9 @@ export class GeminiAICanonicalEvaluationStrategy
 
         if (firstCandidate.content?.role) {
           currentRole = firstCandidate.content.role;
+          if (currentRole === 'model') {
+            currentRole = 'assistant'; // Answers returned from the model are always from the assistant role
+          }
         }
 
         if (!firstCandidate.content) {
