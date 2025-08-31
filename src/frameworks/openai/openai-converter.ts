@@ -608,7 +608,7 @@ function convertResponsesAPIMessagesToLLMMessages(
       // Handle OpenAI Responses API specific content types
       switch (contentElement.type) {
         case 'output_text':
-          role = 'assistant' as const; // TODO: verify this is correct
+          role = 'assistant' as const;
           content.push(contentElement.text);
           break;
         case 'text':

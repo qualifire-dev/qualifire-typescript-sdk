@@ -129,6 +129,23 @@ export class VercelAICanonicalEvaluationStrategy
       }
     }
 
+    // Handle tool calls from streaming response
+    if (response.toolResults) {
+      const toolResults = await response.toolResults;
+      for (const toolResult of toolResults) {
+        messages.push({
+          role: 'tool',
+          tool_calls: [
+            {
+              name: toolResult.toolName,
+              arguments: toolResult.output,
+              id: toolResult.toolCallId,
+            },
+          ],
+        });
+      }
+    }
+
     return messages;
   }
 
