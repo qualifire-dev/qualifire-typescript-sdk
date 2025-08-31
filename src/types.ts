@@ -45,7 +45,7 @@ export const LLMToolDefinitionSchema = z.object({
   description: z.string(),
   parameters: z.record(z.string(), z.any()),
 });
-const LLMToolCallSchema = z.object({
+export const LLMToolCallSchema = z.object({
   name: z.string(),
   arguments: z.record(z.string(), z.any()),
   id: z.string().optional(),

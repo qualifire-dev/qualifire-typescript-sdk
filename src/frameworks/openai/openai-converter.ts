@@ -568,7 +568,13 @@ function convertResponsesAPIMessagesToLLMMessages(
   const extracted_messages: LLMMessage[] = [];
 
   for (const message of messages) {
-    // Handle OpenAI Responses API function_call type
+    if (message.type === 'function_call_output') {
+      extracted_messages.push({
+        role: 'tool',
+        content: message.output,
+      });
+    continue;
+    }
     if (message.type === 'function_call') {
       extracted_messages.push({
         role: 'assistant' as const,

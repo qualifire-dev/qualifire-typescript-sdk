@@ -3,6 +3,8 @@ import {
   EvaluationProxyAPIRequest,
   LLMMessage,
   LLMToolDefinition,
+  LLMToolCallSchema,
+  LLMToolCall,
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
 import {
@@ -135,13 +137,7 @@ export class VercelAICanonicalEvaluationStrategy
       for (const toolResult of toolResults) {
         messages.push({
           role: 'tool',
-          tool_calls: [
-            {
-              name: toolResult.toolName,
-              arguments: toolResult.output,
-              id: toolResult.toolCallId,
-            },
-          ],
+          content: toolResult.output,
         });
       }
     }
@@ -152,39 +148,15 @@ export class VercelAICanonicalEvaluationStrategy
   private async handleNonStreamingResponse(
     response: VercelAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
-    const messages: LLMMessage[] = [];
-    // Handle messages with tool-call and tool-result content
-    if (response.content && Array.isArray(response.content)) {
-      for (const message of response.content) {
-        if (message.type === 'tool-call') {
-          // Handle tool-call content
-          messages.push({
-            role: 'assistant',
-            tool_calls: [
-              {
-                name: message.toolName,
-                arguments: message.input,
-                id: message.toolCallId,
-              },
-            ],
-          });
-        } else if (message.type === 'tool-result') {
-          // Handle tool-result content
-          messages.push({
-            role: 'tool',
-            tool_calls: [
-              {
-                name: message.toolName,
-                arguments: message.output,
-                id: message.toolCallId,
-              },
-            ],
-          });
-        }
-      }
+    if (
+      response.response.messages &&
+      Array.isArray(response.response.messages)
+    ) {
+      return this.convertRequestMessageToLLMMessages(
+        response.response.messages as ModelMessage[]
+      );
     }
-
-    return messages;
+    return [];
   }
 
   private convertToolsToLLMDefinitions(
@@ -264,34 +236,28 @@ export class VercelAICanonicalEvaluationStrategy
             const textParts = assistantMessage.content.filter(
               part => part.type === 'text' || part.type === 'reasoning'
             ) as TextPart[];
-            const toolCalls = assistantMessage.content.filter(
-              part => part.type === 'tool-call'
-            ) as ToolCallPart[];
+            const toolCalls = extractToolCalls(
+              assistantMessage.content.filter(
+                part => part.type === 'tool-call'
+              ) as ToolCallPart[]
+            );
+
             extracted_messages.push({
               role: 'assistant',
               content: textParts
                 .map(part => part.text)
                 .join('')
                 .trim(),
-              tool_calls: toolCalls.map(part => ({
-                name: part.toolName,
-                arguments: JSON.parse(part.input as string),
-                id: part.toolCallId,
-              })),
+              tool_calls: toolCalls,
             });
           }
           break;
         case 'tool':
           const toolMessage = message as ToolModelMessage;
+          const toolContent = extractToolContent(toolMessage);
           extracted_messages.push({
             role: 'tool',
-            tool_calls: toolMessage.content.map(part => {
-              return {
-                name: part.toolName,
-                arguments: part.output,
-                id: part.toolCallId,
-              };
-            }),
+            content: toolContent,
           });
           break;
         default:
@@ -302,4 +268,56 @@ export class VercelAICanonicalEvaluationStrategy
     }
     return extracted_messages;
   }
+}
+
+// This parses a ToolModelMessage object into a string
+function extractToolContent(toolMessage: ToolModelMessage): string {
+  if (toolMessage.role !== 'tool') {
+    return ''; // Illegal message given.
+  }
+  const content = toolMessage.content;
+  if (content.length !== 1) {
+    return '';
+  }
+  const firstContent = content[0];
+  if (firstContent.type !== 'tool-result') {
+    return '';
+  }
+  // LanguageModelV2ToolResultOutput is not exported unfortunaly so we have to use this type
+  const output = firstContent.output;
+  switch (output.type) {
+    case 'json':
+    case 'error-json':
+      return JSON.stringify(output.value);
+    case 'text':
+    case 'error-text':
+      return output.value;
+    case 'content':
+      const textParts = output.value.filter(
+        part => part.type === 'text'
+      ) as TextPart[];
+      return textParts.map(part => part.text).join('');
+    default:
+      console.debug('Illegal output:', output);
+      return '';
+  }
+}
+
+function extractToolCalls(content: ToolCallPart[]): LLMToolCall[] {
+  let toolCalls: LLMToolCall[] = [];
+  for (const part of content) {
+    if (part.type !== 'tool-call') {
+      continue;
+    }
+    let toolCall: unknown = {
+      name: part.toolName,
+      arguments: part.input,
+      id: part.toolCallId,
+    };
+    const parsed = LLMToolCallSchema.safeParse(toolCall);
+    if (parsed.success) {
+      toolCalls.push(parsed.data);
+    }
+  }
+  return toolCalls;
 }
