@@ -326,25 +326,64 @@ export class OpenAICanonicalEvaluationStrategy
 
     // Initialize accumulator for Responses API streaming content
     let accumulatedContent = '';
+    let accumulatedArguments = '';
+    let toolName = '';
+    let toolId = '';
     let messageRole: string | undefined;
 
     for (const chunk of responseChunks) {
-      const result = this.processResponsesApiChunk(chunk, messages);
-      if (result) {
-        accumulatedContent += result.accumulatedContent;
-        if (result.messageRole) {
-          messageRole = result.messageRole;
+      const messageResult = this.processResponsesApiChunkMessage(chunk);
+      if (messageResult) {
+        if (messageResult.accumulatedContent) {
+        accumulatedContent += messageResult.accumulatedContent;
+        }
+        if (messageResult.messageRole) {  
+          messageRole = messageResult.messageRole;
+        }
+      } else {
+        const toolCallResult = this.processResponsesApiChunkToolCall(chunk);
+        if (toolCallResult) {
+          if (toolCallResult.argumentsDelta) {
+            accumulatedArguments += toolCallResult.argumentsDelta;
+          }
+          if (toolCallResult.toolName) {
+            toolName = toolCallResult.toolName;
+          }
+          if (toolCallResult.toolCallId) {
+            toolId = toolCallResult.toolCallId;
+          }
         }
       }
     }
 
-    // After processing all chunks, create the final accumulated message if we have content
-    if (messageRole && accumulatedContent) {
-      const finalMessage: LLMMessage = {
+    // After processing all chunks, create the final accumulated message
+    // Handle tool call case - tool calls are always from assistant role
+    if (toolName && toolId) {
+      let parsedArguments = {};
+      try {
+        parsedArguments = accumulatedArguments ? JSON.parse(accumulatedArguments) : {};
+      } catch (error) {
+        console.debug('Error parsing accumulated tool call arguments. Using empty object instead:', error);
+        parsedArguments = {};
+      }
+
+      const toolCallMessage: LLMMessage = {
+        role: 'assistant',
+        tool_calls: [{
+          name: toolName,
+          arguments: parsedArguments,
+          id: toolId,
+        }],
+      };
+      messages.push(toolCallMessage);
+    }
+    // Handle regular message case - only if we have content and no tool call
+    else if (messageRole && accumulatedContent) {
+      const contentMessage: LLMMessage = {
         role: messageRole,
         content: accumulatedContent,
       };
-      messages.push(finalMessage);
+      messages.push(contentMessage);
     }
 
     return messages;
@@ -409,19 +448,12 @@ export class OpenAICanonicalEvaluationStrategy
     return { accumulatedContent, messageRole };
   }
 
-  private processResponsesApiChunk(
+  private processResponsesApiChunkMessage(
     chunk: any,
-    messages: LLMMessage[]
   ): {
-    accumulatedContent: string;
+    accumulatedContent?: string;
     messageRole?: string;
-  } | null {
-    // Handle legacy format - direct output
-    if (chunk.output) {
-      messages.push(...convertResponsesAPIMessagesToLLMMessages(chunk.output));
-      return null;
-    }
-
+  } | null{
     // Handle new streaming format - text deltas
     if (chunk.type === 'response.output_text.delta' && chunk.delta) {
       return {
@@ -440,11 +472,33 @@ export class OpenAICanonicalEvaluationStrategy
     // Handle output item added (establishes the message role)
     if (chunk.type === 'response.output_item.added' && chunk.item?.role) {
       return {
-        accumulatedContent: '',
         messageRole: chunk.item.role,
       };
     }
 
+    return null;
+  }
+
+  private processResponsesApiChunkToolCall(
+    chunk: any
+  ): { argumentsDelta?: string; toolName?: string; toolCallId?: string } | null {
+    // Handle OpenAI Responses API function call arguments streaming
+    if (chunk.type === 'response.function_call_arguments.delta' && chunk.delta) {
+      // Return the arguments delta for concatenation
+      return {
+        argumentsDelta: chunk.delta,
+      };
+    }
+
+    // Handle function call item added (establishes the function call)
+    if (chunk.type === 'response.output_item.added' && chunk.item?.type === 'function_call') {
+      const item = chunk.item;
+      
+      return {
+        toolName: item.name,
+        toolCallId: item.call_id,
+      };
+    }
     return null;
   }
 
