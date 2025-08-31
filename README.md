@@ -79,8 +79,7 @@ console.log(evaluationResponse);
 
 Evaluates the input and output using the Qualifire API. Returns a promise that resolves to the evaluation response, or undefined if async is true.
 
-
-
+- In VercelAI - Do notice that giving stream response to `evaluate()` may lock the `response.textStream`!
 
 [build-img]: https://github.com/qualifire-dev/develop/qualifire-typescript-sdk/actions/workflows/release.yml/badge.svg
 [build-url]: https://github.com/qualifire-dev/qualifire-typescript-sdk/actions/workflows/release.yml
