@@ -589,6 +589,11 @@ function convertResponsesAPIMessagesToLLMMessages(
       continue;
     }
 
+
+    if (message.type !== 'message') {
+      console.debug('Invalid OpenAI Responses API output: message - ' + JSON.stringify(message));
+      continue;
+    }
     // Handle simple string content messages
     if (typeof message.content === 'string') {
       extracted_messages.push({
