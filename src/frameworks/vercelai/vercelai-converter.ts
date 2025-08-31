@@ -137,7 +137,7 @@ export class VercelAICanonicalEvaluationStrategy
       for (const toolResult of toolResults) {
         messages.push({
           role: 'tool',
-          content: toolResult.output,
+          content: JSON.stringify(toolResult.output),
         });
       }
     }
