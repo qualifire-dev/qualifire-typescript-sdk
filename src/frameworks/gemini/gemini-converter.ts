@@ -116,9 +116,9 @@ export class GeminiAICanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    let accumulatedText: string[] = [];
+    let accumulatedContentParts: string[] = [];
     let currentRole = 'assistant';
-
+    let toolCalls: LLMToolCall[] = [];
     for (const chunk of response) {
       if (chunk?.candidates && chunk.candidates.length > 0) {
         if (chunk.candidates.length > 1) {
@@ -144,15 +144,23 @@ export class GeminiAICanonicalEvaluationStrategy
 
         const message = convertContentToLLMMessage(firstCandidate.content);
         if (message?.content) {
-          accumulatedText.push(message.content);
+          accumulatedContentParts.push(message.content);
+        }
+        if (message?.tool_calls) {
+          toolCalls.push(...message.tool_calls);
         }
       }
     }
 
-    if (accumulatedText) {
+    const accumulatedContent =
+      accumulatedContentParts.length > 0
+        ? accumulatedContentParts.join('').trim()
+        : undefined;
+    if (accumulatedContent || toolCalls.length > 0) {
       messages.push({
         role: currentRole,
-        content: accumulatedText.join('').trim(),
+        content: accumulatedContent,
+        tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
       });
     }
 
