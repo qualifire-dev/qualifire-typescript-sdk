@@ -13,8 +13,12 @@ import { RawMessageStreamEvent, MessageStreamEvent,
   type RawContentBlockStartEvent,
   type RawContentBlockDeltaEvent,
   type RawContentBlockStopEvent,
+  type ContentBlock,
   type ThinkingBlock,
   type ToolUseBlock,
+  type ContentBlockParam,
+  type ToolResultBlockParam,
+  type TextBlockParam,
   type TextDelta,
   type InputJSONDelta,
 } from '@anthropic-ai/sdk/resources/messages';
@@ -76,7 +80,7 @@ export class ClaudeCanonicalEvaluationStrategy
     // Handle Claude request messages
     if (request?.messages) {
       messages.push(
-        ...this.convertResponseMessagesToLLMMessages(request.messages)
+        ...this.convertClaudeMessagesToLLMMessages(request.messages as Array<Message>)
       );
     }
 
@@ -133,7 +137,7 @@ export class ClaudeCanonicalEvaluationStrategy
               accumulatedContent.push(thinkingBlock.thinking)
               break;
             default:
-              throw new Error(`Invalid content block type: ${responseEvent}`);
+              console.debug(`Invalid content block type: ${responseEvent}`);
           }
           break;
         case 'content_block_delta':
@@ -194,14 +198,14 @@ export class ClaudeCanonicalEvaluationStrategy
     const messages: LLMMessage[] = [];
 
     if (response?.role) {
-      messages.push(...this.convertResponseMessagesToLLMMessages([response]));
+      messages.push(...this.convertClaudeMessagesToLLMMessages([response] as Array<Message>));
     }
 
     return messages;
   }
 
   // Claude-specific function to convert Response API messages to LLM messages
-  private convertResponseMessagesToLLMMessages(messages: any[]): LLMMessage[] {
+  private convertClaudeMessagesToLLMMessages(messages: Array<Message>): LLMMessage[] {
     const extracted_messages: LLMMessage[] = [];
 
     for (const message of messages) {
@@ -213,70 +217,60 @@ export class ClaudeCanonicalEvaluationStrategy
         extracted_messages.push(llmMessage);
         continue;
       }
-      const content: string[] = [];
-      const tool_calls: LLMToolCall[] = [];
+      const aggregatedContent: string[] = [];
+      const aggregatedToolCalls: LLMToolCall[] = [];
       const role: string = message.role;
-      let messageContents = [];
-      if (message.content) {
-        messageContents = message.content;
-      } else if (message.parts) {
-        messageContents = message.parts;
-      } else {
+      if (!message.content) {
         continue;
       }
-      for (const part of messageContents) {
-        // claude has messages with only one content. In that case we can add a message based on that single content.
-        if (messageContents.length == 1) {
-          switch (part.type) {
-            case 'tool_use':
-              extracted_messages.push({
-                role: 'assistant' as const,
-                tool_calls: [
-                  {
-                    name: part.name,
-                    arguments: part.input,
-                    id: part.id,
-                  },
-                ],
-              });
-              break;
-            case 'tool_result':
-              extracted_messages.push({
-                role: 'tool' as const,
-                content: JSON.stringify(part.content),
-              });
-              break;
-            case 'text':
-              const textMessage: LLMMessage = {
-                role: role,
-                content: part.text,
-              };
-              extracted_messages.push(textMessage);
-              break;
-            default:
-              throw new Error(
-                'Invalid Claude output: message - ' +
-                  JSON.stringify(message) +
-                  ' part - ' +
-                  JSON.stringify(part)
-              );
-          }
+      for (const part of (message.content as Array<ContentBlockParam>)) {
+        switch (part.type) {
+          case 'tool_use':
+            const toolUseBlock = part as ToolUseBlock;
+            aggregatedToolCalls.push({
+                name: toolUseBlock.name,
+                arguments: toolUseBlock.input as Record<string, any>,
+                id: toolUseBlock.id,
+            });
+            break;
+          case 'tool_result':
+            const toolResultBlock = part as ToolResultBlockParam;
+            if (typeof toolResultBlock.content === 'string') {
+              aggregatedContent.push(toolResultBlock.content)
+            } else {
+              (toolResultBlock.content as Array<ContentBlockParam>).filter(part => part.type === 'text').forEach(part => {   
+                const textPart = part as TextBlockParam;
+                aggregatedContent.push(textPart.text)
+              })
+            }
+            break;
+          case 'text':
+            const textBlock = part as TextBlock;
+            aggregatedContent.push(textBlock.text)
+            break;
+          default:
+            throw new Error(
+              'Invalid Claude output: message - ' +
+                JSON.stringify(message) +
+                ' part - ' +
+                JSON.stringify(part)
+            );
         }
       }
 
-      // If we accumulated content or tool_calls, add the message
-      if (content.length > 0 || tool_calls.length > 0) {
-        const accumulatedMessage: LLMMessage = {
+      // If we accumulated aggregatedContent or aggregatedToolCalls, add the message
+      if (aggregatedContent.length > 0 || aggregatedToolCalls.length > 0) {
+        let accumulatedMessage: LLMMessage = {
           role,
         };
 
-        if (content.length > 0) {
-          accumulatedMessage.content = content.join(' ');
+        if (aggregatedContent.length > 0) {
+          accumulatedMessage.content = aggregatedContent.join('');
         }
 
-        // Only add tool_calls property for assistant messages
-        if (tool_calls.length > 0) {
-          accumulatedMessage.tool_calls = tool_calls;
+        // Only add aggregatedToolCalls property for assistant messages
+        if (aggregatedToolCalls.length > 0) {
+          accumulatedMessage.tool_calls = aggregatedToolCalls;
         }
         extracted_messages.push(accumulatedMessage);
       }

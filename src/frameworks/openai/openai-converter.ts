@@ -27,6 +27,11 @@ import {
   ResponseCreateParamsStreaming,
   ResponseCreateParamsBase,
   ResponseStreamEvent,
+  type ResponseOutputItem,
+  type ResponseInputItem,
+  ResponseFunctionWebSearch,
+  ResponseFileSearchToolCall,
+  ResponseFunctionToolCall,
 } from 'openai/resources/responses/responses';
 
 type OpenAIResponseCreateRequest =
@@ -232,7 +237,7 @@ export class OpenAICanonicalEvaluationStrategy
         });
       } else {
         messages.push(
-          ...convertResponsesAPIMessagesToLLMMessages(request.input)
+          ...convertResponsesAPIMessagesToLLMMessages(request.input as Array<ResponseInputItem>)
         );
       }
     }
@@ -514,14 +519,14 @@ export class OpenAICanonicalEvaluationStrategy
     }
 
     const firstChoice = response.choices[0];
-    if (firstChoice.message?.role) {
+    if (firstChoice.message.role) {
       const message: LLMMessage = {
         role: firstChoice.message.role,
       };
-      if (firstChoice.message?.content) {
+      if (firstChoice.message.content) {
         message.content = firstChoice.message.content;
       }
-      if (firstChoice.message?.tool_calls) {
+      if (firstChoice.message.tool_calls) {
         message.tool_calls = firstChoice.message.tool_calls.map(
           (tool_call: any) => ({
             name: tool_call.function.name,
@@ -549,7 +554,7 @@ export class OpenAICanonicalEvaluationStrategy
 
     if (response.output) {
       messages.push(
-        ...convertResponsesAPIMessagesToLLMMessages(response.output)
+        ...convertResponsesAPIMessagesToLLMMessages(response.output as Array<ResponseOutputItem>)
       );
     } else {
       throw new Error(
@@ -563,7 +568,7 @@ export class OpenAICanonicalEvaluationStrategy
 
 // OpenAI-specific function to convert Responses API messages to LLM messages
 function convertResponsesAPIMessagesToLLMMessages(
-  messages: any[]
+  messages: Array<ResponseOutputItem | ResponseInputItem>
 ): LLMMessage[] {
   const extracted_messages: LLMMessage[] = [];
 
@@ -573,11 +578,11 @@ function convertResponsesAPIMessagesToLLMMessages(
         role: 'tool',
         content: message.output,
       });
-    continue;
+      continue;
     }
     if (message.type === 'function_call') {
       extracted_messages.push({
-        role: 'assistant' as const,
+        role: 'assistant',
         tool_calls: [
           {
             name: message.name,
@@ -603,96 +608,54 @@ function convertResponsesAPIMessagesToLLMMessages(
       continue;
     }
 
-    const content: string[] = [];
-    let role: string = message.role;
-    let messageContents = [];
-
-    if (message.content) {
-      messageContents = message.content;
-    } else if (message.parts) {
-      messageContents = message.parts;
-    } else {
-      continue;
+    if (!message.content) {
+      continue
     }
 
-    for (const contentElement of messageContents) {
+    let aggregatedContent: string[] = [];
+    let aggregatedToolCalls: LLMToolCall[] = [];
+    let role = message.role;
+
+    for (const contentElement of message.content) {
       // Handle OpenAI Responses API specific content types
       switch (contentElement.type) {
         case 'output_text':
-          role = 'assistant' as const;
-          content.push(contentElement.text);
+          role = 'assistant';
+          aggregatedContent.push(contentElement.text);
           break;
-        case 'text':
         case 'input_text':
-          content.push(contentElement.text);
+          aggregatedContent.push(contentElement.text);
           break;
         default:
-          // Handle message-level types for OpenAI Responses API
-          switch (message.type) {
-            case 'message':
-              // Already handled above in the contentElement switch
-              break;
-            case 'web_search_call':
-              extracted_messages.push({
-                role: 'assistant' as const,
-                tool_calls: [
-                  {
-                    name: message.name,
-                    arguments: {},
-                    id: message.id,
-                  },
-                ],
-              });
-              break;
-            case 'file_search_call':
-              const toolArguments = message.queries
-                ? { queries: message?.queries }
-                : {};
-              extracted_messages.push({
-                role: 'assistant' as const,
-                tool_calls: [
-                  {
-                    name: message.name,
-                    arguments: toolArguments,
-                    id: message.id,
-                  },
-                ],
-              });
-              break;
-            case 'function_call':
-              extracted_messages.push({
-                role: 'assistant' as const,
-                tool_calls: [
-                  {
-                    name: message.name,
-                    arguments: JSON.parse(message.arguments),
-                    id: message.id,
-                  },
-                ],
-              });
-              break;
-            default:
-              throw new Error(
-                'Invalid OpenAI Responses API output: message - ' +
-                  JSON.stringify(message) +
-                  ' contentElement - ' +
-                  JSON.stringify(contentElement)
-              );
-          }
+          console.debug(
+            'Invalid OpenAI Responses API output: message - ' +
+              JSON.stringify(message) +
+              ' contentElement - ' +
+              JSON.stringify(contentElement)
+          );
+          continue;
       }
     }
 
     // Add accumulated content message if we have content
-    if (content.length > 0) {
-      extracted_messages.push({
-        role,
-        content: content.join(' '),
-      });
+    let finalContent: string | undefined;
+    if (aggregatedContent.length > 0) {
+      finalContent = aggregatedContent.join('');
     }
+    
+    let finalToolCalls: LLMToolCall[] | undefined;
+    if (aggregatedToolCalls.length > 0) {
+      finalToolCalls = aggregatedToolCalls;
+    }
+    extracted_messages.push({
+        role,
+        content: finalContent,
+        tool_calls: finalToolCalls,
+      });
   }
-
   return extracted_messages;
 }
+
 export function convertToolsToLLMDefinitions(
   tools: unknown[]
 ): LLMToolDefinition[] {
