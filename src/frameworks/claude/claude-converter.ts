@@ -7,7 +7,17 @@ import {
 import { CanonicalEvaluationStrategy } from '../canonical';
 import { type MessageCreateParams, type MessageStreamParams} from '@anthropic-ai/sdk/resources';
 import { Message } from '@anthropic-ai/sdk/resources';
-import { RawMessageStreamEvent, MessageStreamEvent } from '@anthropic-ai/sdk/resources/messages';
+import { RawMessageStreamEvent, MessageStreamEvent,
+  type TextBlock,
+  type RawMessageStartEvent,
+  type RawContentBlockStartEvent,
+  type RawContentBlockDeltaEvent,
+  type RawContentBlockStopEvent,
+  type ThinkingBlock,
+  type ToolUseBlock,
+  type TextDelta,
+  type InputJSONDelta,
+} from '@anthropic-ai/sdk/resources/messages';
 
 type AnthropicCreateAPIResponsesType = Message | RawMessageStreamEvent;
 
@@ -59,7 +69,7 @@ export class ClaudeCanonicalEvaluationStrategy
     if (request?.system) {
       messages.push({
         role: 'system',
-        content: request.system,
+        content: request.system as string,
       });
     }
 
@@ -90,20 +100,91 @@ export class ClaudeCanonicalEvaluationStrategy
   private async handleStreaming(response: Array<MessageStreamEvent>): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    let accumulatedContent = [];
-    for (const chunk of response) {
-      // Handle streaming chunk with message_start type
-      const content = extractContentFromRawMessageStreamEvent(chunk);
-      if (content) {
-        accumulatedContent.push(content);
+    let role: string | undefined;
+    let accumulatedContent: string[] = [];
+    let accumulatedToolName: string | undefined;
+    let accumulatedToolId: string | undefined;
+    let accumulatedToolInput: string[] = [];
+    for (const responseEvent of response) {
+      switch (responseEvent.type) {
+        case 'message_start':
+          const rawMessageStartEvent = responseEvent as RawMessageStartEvent;
+          role = rawMessageStartEvent.message.role;
+          accumulatedContent = [];
+          accumulatedToolName = undefined;
+          accumulatedToolId = undefined;
+          accumulatedToolInput = [];
+          break;
+        case 'content_block_start':
+          const rawContentBlockStartEvent = responseEvent as RawContentBlockStartEvent;
+          switch (rawContentBlockStartEvent.content_block.type) {
+            case 'text':
+              const textBlock = rawContentBlockStartEvent.content_block as TextBlock;  
+              accumulatedContent.push(textBlock.text)
+              break;
+            case 'tool_use':
+              const toolUseBlock = rawContentBlockStartEvent.content_block as ToolUseBlock;
+              accumulatedToolId = toolUseBlock.id
+              accumulatedToolName = toolUseBlock.name
+              accumulatedToolInput = []
+              break;
+            case 'thinking':
+              const thinkingBlock = rawContentBlockStartEvent.content_block as ThinkingBlock;
+              accumulatedContent.push(thinkingBlock.thinking)
+              break;
+            default:
+              throw new Error(`Invalid content block type: ${responseEvent}`);
+          }
+          break;
+        case 'content_block_delta':
+          const rawContentBlockDeltaEvent = responseEvent as RawContentBlockDeltaEvent;
+          switch (rawContentBlockDeltaEvent.delta.type) {
+              case 'text_delta':
+                const textDelta = rawContentBlockDeltaEvent.delta as TextDelta;
+                accumulatedContent.push(textDelta.text)
+                break;
+              case 'input_json_delta':
+                const inputJsonDelta = rawContentBlockDeltaEvent.delta as InputJSONDelta;
+                accumulatedToolInput.push(inputJsonDelta.partial_json)
+                break;
+              default:
+              throw new Error(`Invalid delta type: ${rawContentBlockDeltaEvent}`);
+          }
+          break;
+        case 'message_stop':
+          let finalContent: string | undefined;
+          if (accumulatedContent.length > 0) {
+            finalContent = accumulatedContent.join('').trim();
+          }
+          let finalTool: LLMToolCall | undefined;
+          if (accumulatedToolName) {
+            finalTool = {
+              id: accumulatedToolId,
+              name: accumulatedToolName,
+              arguments: JSON.parse(accumulatedToolInput.join('')),
+            };
+          };
+          if (!role) {
+            throw new Error(`role was not set`);
+          }
+          messages.push({
+            role: role == 'model' ? 'assistant' : role,
+            content: finalContent ?? undefined,
+            tool_calls: finalTool ? [finalTool] : undefined,
+          });
+          role = undefined;
+          accumulatedContent = [];
+          accumulatedToolName = undefined;
+          accumulatedToolId = undefined;
+          accumulatedToolInput = [];
+          break;
+        case 'content_block_stop':
+        case 'message_delta':
+          break;
+        default:
+          throw new Error(`Invalid event: ${responseEvent}`);
       }
     }
-
-    messages.push({
-      role: 'assistant',
-      content: accumulatedContent.join('').trim(),
-    });
-
     return messages;
   }
 
@@ -201,22 +282,5 @@ export class ClaudeCanonicalEvaluationStrategy
       }
     }
     return extracted_messages;
-  }
-}
-
-function extractContentFromRawMessageStreamEvent(event: RawMessageStreamEvent): string {
-  switch (event.type) {
-    case 'content_block_start':
-      if (event.content_block.type === 'text') {
-        return event.content_block.text;
-      }
-      return '';
-    case 'content_block_delta':
-      if (event.delta.type === 'text_delta') {
-        return event.delta.text;
-      }
-      return '';
-    default:
-      return '';
   }
 }
