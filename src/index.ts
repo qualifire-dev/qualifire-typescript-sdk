@@ -4,6 +4,7 @@ import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
 import { EvaluationProxyAPIRequest, EvaluationProxyAPIRequestSchema, EvaluationRequestV2Schema, type EvaluationRequestV2, type EvaluationResponse, type Framework } from './types';
+import { CanonicalEvaluationStrategy } from './frameworks/canonical';
 
 export type {
   EvaluationRequestV2,
@@ -103,7 +104,7 @@ export class Qualifire {
 
     const parseEvaluationRequestResultV2 = EvaluationRequestV2Schema.safeParse(evaluationRequest)
     if (parseEvaluationRequestResultV2.success) {
-      return this.evaluateWithConverters(parseEvaluationRequestResultV2.data as EvaluationRequestV2);
+      return this.evaluateWithConverters(parseEvaluationRequestResultV2.data );
     }
     
     throw new Error(`Invalid evaluation request format: ${JSON.stringify(evaluationRequest)}`);
@@ -119,17 +120,17 @@ export class Qualifire {
       output: evaluationProxyAPIRequest.output,
       messages: evaluationProxyAPIRequest.messages,
       available_tools: evaluationProxyAPIRequest.available_tools,
-      dangerous_content_check: evaluationProxyAPIRequest.dangerous_content_check ?? evaluationProxyAPIRequest.dangerousContentCheck,
-      grounding_check: evaluationProxyAPIRequest.grounding_check ?? evaluationProxyAPIRequest.groundingCheck,
-      hallucinations_check: evaluationProxyAPIRequest.hallucinations_check ?? evaluationProxyAPIRequest.hallucinationsCheck,
-      harassment_check: evaluationProxyAPIRequest.harassment_check ?? evaluationProxyAPIRequest.harassmentCheck,
-      hate_speech_check: evaluationProxyAPIRequest.hate_speech_check ?? evaluationProxyAPIRequest.hateSpeechCheck,
-      instructions_following_check: evaluationProxyAPIRequest.instructions_following_check ?? evaluationProxyAPIRequest.instructionsFollowingCheck,
-      pii_check: evaluationProxyAPIRequest.pii_check ?? evaluationProxyAPIRequest.piiCheck,
-      prompt_injections: evaluationProxyAPIRequest.prompt_injections ?? evaluationProxyAPIRequest.promptInjections,
-      sexual_content_check: evaluationProxyAPIRequest.sexual_content_check ?? evaluationProxyAPIRequest.sexualContentCheck,
-      syntax_checks: evaluationProxyAPIRequest.syntax_checks ?? evaluationProxyAPIRequest.syntaxChecks,
-      tool_selection_quality_check: evaluationProxyAPIRequest.tool_selection_quality_check ?? evaluationProxyAPIRequest.toolSelectionQualityCheck,
+      dangerous_content_check: evaluationProxyAPIRequest.dangerous_content_check || evaluationProxyAPIRequest.dangerousContentCheck,
+      grounding_check: evaluationProxyAPIRequest.grounding_check || evaluationProxyAPIRequest.groundingCheck,
+      hallucinations_check: evaluationProxyAPIRequest.hallucinations_check || evaluationProxyAPIRequest.hallucinationsCheck,
+      harassment_check: evaluationProxyAPIRequest.harassment_check || evaluationProxyAPIRequest.harassmentCheck,
+      hate_speech_check: evaluationProxyAPIRequest.hate_speech_check || evaluationProxyAPIRequest.hateSpeechCheck,
+      instructions_following_check: evaluationProxyAPIRequest.instructions_following_check || evaluationProxyAPIRequest.instructionsFollowingCheck,
+      pii_check: evaluationProxyAPIRequest.pii_check || evaluationProxyAPIRequest.piiCheck,
+      prompt_injections: evaluationProxyAPIRequest.prompt_injections || evaluationProxyAPIRequest.promptInjections,
+      sexual_content_check: evaluationProxyAPIRequest.sexual_content_check || evaluationProxyAPIRequest.sexualContentCheck,
+      syntax_checks: evaluationProxyAPIRequest.syntax_checks || evaluationProxyAPIRequest.syntaxChecks,
+      tool_selection_quality_check: evaluationProxyAPIRequest.tool_selection_quality_check || evaluationProxyAPIRequest.toolSelectionQualityCheck,
       assertions: evaluationProxyAPIRequest.assertions,
     };
 
@@ -156,7 +157,7 @@ export class Qualifire {
    * Evaluates using framework converters for request/response
    */
   private evaluateWithConverters = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
-    const frameworkConverters: Record<Framework, () => any> = {
+    const frameworkConverters: Record<Framework, () => CanonicalEvaluationStrategy<any, any>> = {
       'openai': () => new OpenAICanonicalEvaluationStrategy(),
       'vercelai': () => new VercelAICanonicalEvaluationStrategy(),
       'gemini': () => new GeminiAICanonicalEvaluationStrategy(),
