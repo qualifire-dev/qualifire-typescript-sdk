@@ -5,7 +5,7 @@ import {
   LLMToolDefinition,
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
-
+import { Content, Part } from '@google/genai';
 type GeminiAICanonicalEvaluationStrategyResponse = any;
 type GeminiAICanonicalEvaluationStrategyRequest = any;
 
@@ -66,16 +66,42 @@ export class GeminiAICanonicalEvaluationStrategy
 
     // Handle request contents
     if (request?.contents) {
-      for (const content of request.contents) {
-        if (content.parts && content.parts.length > 0) {
-          const message = convertContentToLLMMessage(content);
-          if (message) {
-            messages.push(message);
-          }
+      /*
+        Gemini request.contents is an object called contentListUnions which can be
+        list of parts or content objects:
+        https://github.com/googleapis/js-genai/blob/b5d77e1bfea5c6b4903bc7ade986e91d6e146835/src/types.ts#L1937
+      */
+      let contentListUnions = request.contents;
+      if (!Array.isArray(contentListUnions)) {
+        contentListUnions = [contentListUnions];
+      }
+
+      if (contentListUnions.length === 0) {
+        return {
+          messages: [],
+          available_tools,
+        };
+      }
+
+      let convertedContents: Array<Content> = [];
+      if (contentListUnions.every(isContent)) {
+        convertedContents = contentListUnions as Array<Content>;
+      } else if (contentListUnions.every(isPartOrString)) {
+        convertedContents.push({ role: 'user', parts: contentListUnions });
+      } else {
+        throw new Error(
+          `Invalid contents given. Gemini Does not support mixing parts and contents: ${JSON.stringify(
+            contentListUnions
+          )}`
+        );
+      }
+      for (const content of convertedContents) {
+        const message = convertContentToLLMMessage(content);
+        if (message) {
+          messages.push(message);
         }
       }
     }
-
     return {
       messages,
       available_tools,
@@ -101,7 +127,9 @@ export class GeminiAICanonicalEvaluationStrategy
         firstCandidate.content?.parts &&
         firstCandidate.content.parts.length > 0
       ) {
-        const message = convertContentToLLMMessage(firstCandidate.content);
+        const message = convertContentToLLMMessage(
+          firstCandidate.content as Content
+        );
         if (message) {
           messages.push(message);
         }
@@ -142,7 +170,9 @@ export class GeminiAICanonicalEvaluationStrategy
           continue;
         }
 
-        const message = convertContentToLLMMessage(firstCandidate.content);
+        const message = convertContentToLLMMessage(
+          firstCandidate.content as Content
+        );
         if (message?.content) {
           accumulatedContentParts.push(message.content);
         }
@@ -180,13 +210,16 @@ function convertContentToLLMMessage(content: any): LLMMessage | null {
     return null;
   }
 
-  let role = content.role;
+  // In Gemini role is optional, but by default the api is changing it to 'user' when no role is provided
+  let role = content.role || 'user';
   let textContent: string[] = [];
   let tool_calls: LLMToolCall[] = [];
 
   // Process all parts and aggregate them
   for (const part of content.parts) {
-    if (part.text) {
+    if (typeof part === 'string') {
+      textContent.push(part);
+    } else if (part.text) {
       textContent.push(part.text);
     } else if (part.functionCall) {
       role = 'assistant'; // Function calls are always from assistant
@@ -214,4 +247,30 @@ function convertContentToLLMMessage(content: any): LLMMessage | null {
     content: finalContent,
     tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
   };
+}
+
+function isPartOrString(obj: unknown): boolean {
+  if (typeof obj === 'string') {
+    return true;
+  }
+  if (typeof obj === 'object' && obj !== null) {
+    return (
+      'fileData' in obj ||
+      'text' in obj ||
+      'functionCall' in obj ||
+      'functionResponse' in obj ||
+      'inlineData' in obj ||
+      'videoMetadata' in obj ||
+      'codeExecutionResult' in obj ||
+      'executableCode' in obj
+    );
+  }
+  return false;
+}
+
+function isContent(obj: unknown): boolean {
+  if (typeof obj === 'object' && obj !== null) {
+    return 'parts' in obj || 'role' in obj;
+  }
+  return false;
 }
