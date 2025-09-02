@@ -261,7 +261,7 @@ export class VercelAICanonicalEvaluationStrategy
           });
           break;
         default:
-          throw new Error(
+          console.debug(
             'Invalid VercelAI output: message - ' + JSON.stringify(message)
           );
       }

@@ -152,7 +152,7 @@ export class ClaudeCanonicalEvaluationStrategy
                 accumulatedToolInput.push(inputJsonDelta.partial_json)
                 break;
               default:
-              throw new Error(`Invalid delta type: ${rawContentBlockDeltaEvent}`);
+                console.debug(`Invalid delta type: ${rawContentBlockDeltaEvent}`);
           }
           break;
         case 'message_stop':
@@ -169,7 +169,8 @@ export class ClaudeCanonicalEvaluationStrategy
             };
           };
           if (!role) {
-            throw new Error(`role was not set`);
+            console.debug(`role was not set`);
+            continue;
           }
           messages.push({
             role: role == 'model' ? 'assistant' : role,
@@ -186,7 +187,7 @@ export class ClaudeCanonicalEvaluationStrategy
         case 'message_delta':
           break;
         default:
-          throw new Error(`Invalid event: ${responseEvent}`);
+          console.debug(`Invalid event: ${responseEvent}`);
       }
     }
     return messages;
@@ -249,7 +250,7 @@ export class ClaudeCanonicalEvaluationStrategy
             aggregatedContent.push(textBlock.text)
             break;
           default:
-            throw new Error(
+            console.debug(
               'Invalid Claude output: message - ' +
                 JSON.stringify(message) +
                 ' part - ' +

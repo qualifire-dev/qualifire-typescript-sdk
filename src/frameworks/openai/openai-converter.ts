@@ -113,7 +113,7 @@ export class OpenAICanonicalEvaluationStrategy
     } else if (request?.instructions || request?.input) {
       return this.convertRequestForResponsesAPI(request);
     } else {
-      throw new Error('Invalid request: ' + JSON.stringify(request));
+      throw new Error(`Invalid request. Only requests from the following APIs are supported: [chat.completions.create(), responses.create()] - request: ${JSON.stringify(request)}`);
     }
   }
 
@@ -200,7 +200,8 @@ export class OpenAICanonicalEvaluationStrategy
           break;
 
         default:
-          throw new Error('Invalid request: ' + JSON.stringify(message));
+          console.debug('Invalid message role: ' + JSON.stringify(message));
+          continue;
       }
       if (content || tool_calls) {
         convertedMessages.push({
@@ -209,7 +210,7 @@ export class OpenAICanonicalEvaluationStrategy
           tool_calls: tool_calls,
         });
       } else {
-        throw new Error('Invalid request: ' + JSON.stringify(message));
+        console.debug('Invalid empty message: ' + JSON.stringify(message));
       }
     }
 
@@ -515,7 +516,8 @@ export class OpenAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = [];
 
     if (!response?.choices) {
-      throw new Error('Invalid chat completions response: missing choices');
+      console.debug('Invalid chat completions response: missing choices');
+      return [];
     }
 
     const firstChoice = response.choices[0];
@@ -540,7 +542,7 @@ export class OpenAICanonicalEvaluationStrategy
       if (message.content || message.tool_calls) {
         messages.push(message);
       } else {
-        throw new Error('Invalid response: ' + JSON.stringify(firstChoice));
+        console.debug('Invalid empty response: ' + JSON.stringify(firstChoice));
       }
     }
 
@@ -557,7 +559,7 @@ export class OpenAICanonicalEvaluationStrategy
         ...convertResponsesAPIMessagesToLLMMessages(response.output as Array<ResponseOutputItem>)
       );
     } else {
-      throw new Error(
+      console.debug(
         'Invalid Responses API response: ' + JSON.stringify(response)
       );
     }
