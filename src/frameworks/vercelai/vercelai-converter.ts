@@ -76,9 +76,13 @@ export class VercelAICanonicalEvaluationStrategy
         content: request.prompt,
       });
     } else if (request?.messages) {
+      /*
+       Validated as ModelMessage[] in standardizePrompt function here:
+       https://github.com/vercel/ai/blob/d8ada0eb81e42633172d739a40c88e6c5a2f426b/packages/ai/src/prompt/standardize-prompt.ts#L68
+      */
       messages.push(
-        ...this.convertRequestMessageToLLMMessages(
-          request.messages //as ModelMessage[]
+        ...this.convertModelMessagesToLLMMessages(
+          request.messages as ModelMessage[]
         )
       );
     }
@@ -152,7 +156,11 @@ export class VercelAICanonicalEvaluationStrategy
       response.response.messages &&
       Array.isArray(response.response.messages)
     ) {
-      return this.convertRequestMessageToLLMMessages(
+      /*
+       Validated as Array<ResponseMessage> which equals AssistantModelMessage or ToolModelMessage so it's a subset of ModelMessage:
+       https://github.com/vercel/ai/blob/d8ada0eb81e42633172d739a40c88e6c5a2f426b/packages/ai/src/generate-text/generate-text-result.ts#L124C5-L124C38
+     */
+      return this.convertModelMessagesToLLMMessages(
         response.response.messages as ModelMessage[]
       );
     }
@@ -183,7 +191,7 @@ export class VercelAICanonicalEvaluationStrategy
   }
 
   // VercelAI-specific function to convert Responses API messages to LLM messages
-  private convertRequestMessageToLLMMessages(
+  private convertModelMessagesToLLMMessages(
     messages: ModelMessage[]
   ): LLMMessage[] {
     const extractedMessages: LLMMessage[] = [];
