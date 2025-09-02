@@ -46,7 +46,7 @@ export class ClaudeCanonicalEvaluationStrategy
     } = this.convertRequest(request);
 
     const messages: LLMMessage[] = requestMessages || [];
-    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
+    const availableTools: LLMToolDefinition[] = requestAvailableTools || [];
 
     // Check if response is streaming or non-streaming
     if (Array.isArray(response)) {
@@ -61,7 +61,7 @@ export class ClaudeCanonicalEvaluationStrategy
 
     return {
       messages,
-      available_tools: available_tools,
+      available_tools: availableTools,
     };
   }
 

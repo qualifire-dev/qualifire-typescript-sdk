@@ -79,7 +79,7 @@ export class OpenAICanonicalEvaluationStrategy
     } = await this.convertRequest(request);
 
     const messages: LLMMessage[] = requestMessages || [];
-    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
+    const availableTools: LLMToolDefinition[] = requestAvailableTools || [];
 
     if (Array.isArray(response)) {
       const streamingResultMessages = await this.handleStreaming(response);
@@ -102,7 +102,7 @@ export class OpenAICanonicalEvaluationStrategy
 
     return {
       messages,
-      available_tools,
+      available_tools: availableTools,
     };
   }
 
@@ -121,7 +121,7 @@ export class OpenAICanonicalEvaluationStrategy
     request: OpenAIChatCompletionsCreateRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
-    let available_tools: LLMToolDefinition[] = [];
+    let availableTools: LLMToolDefinition[] = [];
 
     if (request?.messages) {
       messages.push(
@@ -130,12 +130,12 @@ export class OpenAICanonicalEvaluationStrategy
     }
 
     if (request?.tools) {
-      available_tools = convertToolsToLLMDefinitions(request?.tools);
+      availableTools = convertToolsToLLMDefinitions(request?.tools);
     }
 
     return {
       messages,
-      available_tools,
+      available_tools: availableTools,
     };
   }
 
@@ -146,7 +146,7 @@ export class OpenAICanonicalEvaluationStrategy
 
     for (const message of messages) {
       let content: string | undefined;
-      let tool_calls: LLMToolCall[] | undefined;
+      let toolCalls: LLMToolCall[] | undefined;
       
       switch (message.role) {
         case 'system':
@@ -169,21 +169,21 @@ export class OpenAICanonicalEvaluationStrategy
             }
           }
           if (assistantMessage.tool_calls) {
-            tool_calls = assistantMessage.tool_calls
-            .filter((tool_call) => tool_call.type === "function")
-            .map((tool_call) => {
+            toolCalls = assistantMessage.tool_calls
+            .filter((toolCalls) => toolCalls.type === "function")
+            .map((toolCalls) => {
                   // It's of type ChatCompletionMessageFunctionToolCall but it's not exported
                   let toolArguments = {}
                   try {
-                    toolArguments = JSON.parse(tool_call.function?.arguments)
+                    toolArguments = JSON.parse(toolCalls.function?.arguments)
                   } catch (error) {
                     console.debug('Error parsing tool call arguments. Using empty object instead:', error)
                     toolArguments = {}
                   }
                   return {
-                    name: tool_call.function?.name || '',
+                    name: toolCalls.function?.name || '',
                     arguments: toolArguments,
-                    id: tool_call.id,
+                    id: toolCalls.id,
                   }
             }) as LLMToolCall[]
           }
@@ -203,11 +203,11 @@ export class OpenAICanonicalEvaluationStrategy
           console.debug('Invalid message role: ' + JSON.stringify(message));
           continue;
       }
-      if (content || tool_calls) {
+      if (content || toolCalls) {
         convertedMessages.push({
           role: message.role,
           content: content,
-          tool_calls: tool_calls,
+          tool_calls: toolCalls,
         });
       } else {
         console.debug('Invalid empty message: ' + JSON.stringify(message));
@@ -221,7 +221,7 @@ export class OpenAICanonicalEvaluationStrategy
     request: OpenAIResponseCreateRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
-    let available_tools: LLMToolDefinition[] = [];
+    let availableTools: LLMToolDefinition[] = [];
 
     if (request?.instructions) {
       messages.push({
@@ -244,12 +244,12 @@ export class OpenAICanonicalEvaluationStrategy
     }
 
     if (request?.tools) {
-      available_tools = convertToolsToLLMDefinitions(request?.tools);
+      availableTools = convertToolsToLLMDefinitions(request?.tools);
     }
 
     return {
       messages,
-      available_tools,
+      available_tools: availableTools,
     };
   }
 
@@ -309,12 +309,12 @@ export class OpenAICanonicalEvaluationStrategy
 
       if (accumulatedToolCalls.length > 0) {
         finalMessage.tool_calls = accumulatedToolCalls.map(
-          (tool_call: any) => ({
-            name: tool_call.function.name,
-            arguments: tool_call.function.arguments
-              ? JSON.parse(tool_call.function.arguments)
+          (toolCalls: any) => ({
+            name: toolCalls.function.name,
+            arguments: toolCalls.function.arguments
+              ? JSON.parse(toolCalls.function.arguments)
               : {},
-            id: tool_call.id,
+            id: toolCalls.id,
           })
         );
       }
@@ -530,12 +530,12 @@ export class OpenAICanonicalEvaluationStrategy
       }
       if (firstChoice.message.tool_calls) {
         message.tool_calls = firstChoice.message.tool_calls.map(
-          (tool_call: any) => ({
-            name: tool_call.function.name,
-            arguments: tool_call.function.arguments
-              ? JSON.parse(tool_call.function.arguments)
+          (toolCall: any) => ({
+            name: toolCall.function.name,
+            arguments: toolCall.function.arguments
+              ? JSON.parse(toolCall.function.arguments)
               : {},
-            id: tool_call.id,
+            id: toolCall.id,
           })
         );
       }

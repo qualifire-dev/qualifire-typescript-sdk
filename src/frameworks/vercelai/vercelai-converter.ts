@@ -36,7 +36,7 @@ export class VercelAICanonicalEvaluationStrategy
     } = await this.convertRequest(request);
 
     const messages: LLMMessage[] = requestMessages || [];
-    const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
+    const availableTools: LLMToolDefinition[] = requestAvailableTools || [];
 
     // Check if response is streaming (has textStream property)
     if (response?.textStream) {
@@ -51,7 +51,7 @@ export class VercelAICanonicalEvaluationStrategy
 
     return {
       messages,
-      available_tools,
+      available_tools: availableTools,
     };
   }
 
