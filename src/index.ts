@@ -114,6 +114,44 @@ export class Qualifire {
    *  toolSelectionQualityCheck: false,
    * });
    * 
+   * // If you are using streaming mode.
+   * const openAiRequestStream = {
+   *  stream: true,
+   *  model: 'gpt-4o',
+   *  messages: [
+   *    {
+   *      role: 'system',
+   *      content: 'You are a helpful assistant that can answer questions.',
+   *    },
+   *    {
+   *      role: 'user',
+   *      content: [
+   *        {
+   *          type: 'text',
+   *          text: 'Are the sky blue?',
+   *        },
+   *      ],
+   *    },
+   *  ],
+   * };
+   * 
+   * const openAiResponseStream = await openaiClient.chat.completions.create(
+   *   openAiRequestStream
+   * );
+   * 
+   * let ResponseChunks: any[] = [];
+   * for await (const chunk of openAiResponseStream) {
+   *   ResponseChunks.push(chunk);
+   * }
+   *
+   * const qualifireResponse = await qualifireClient.evaluate({
+   *   framework: 'openai',
+   *   request: openAiRequestStream,
+   *   response: ResponseChunks,
+   *   groundingCheck: true,
+   *   promptInjections: true,
+   * });
+   * 
    * // Fine-grained messages mode
    * const response2 = await qualifire.evaluate({
    *   messages: [
@@ -138,7 +176,7 @@ export class Qualifire {
    *          "score": 75,
    *          "label": "INFERABLE",
    *          "confidence_score": 100,
-   *          "reason": "The AI's output provides a detailed scientific explanation for why the sky is blue, which is a direct answer to the user's question. While the prompt itself doesn't contain the information about Rayleigh scattering or light wavelengths, the AI's role as a 'helpful assistant that can answer questions' implies it should provide accurate and relevant information. The claims are inferable as they are a logical and scientifically accurate expansion on the simple 'yes' or 'no' implied by the question, providing the 'why' behind the sky's color."
+   *          "reason": "The AI's output provides a detailed scientific explanation for why the sky is blue."
    *        }
    *      ]
    *    }
