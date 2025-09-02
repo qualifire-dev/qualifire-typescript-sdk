@@ -220,7 +220,7 @@ export class ClaudeCanonicalEvaluationStrategy
       }
       const aggregatedContent: string[] = [];
       const aggregatedToolCalls: LLMToolCall[] = [];
-      const role: string = message.role;
+      let role: string = message.role;
       if (!message.content) {
         continue;
       }
@@ -235,6 +235,7 @@ export class ClaudeCanonicalEvaluationStrategy
             });
             break;
           case 'tool_result':
+            role = 'tool'; // Claude expects 'user' role for tool results. But Qualifire treats tool as results as it is sent from 'tool'
             const toolResultBlock = part as ToolResultBlockParam;
             if (typeof toolResultBlock.content === 'string') {
               aggregatedContent.push(toolResultBlock.content)
