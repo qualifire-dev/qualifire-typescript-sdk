@@ -572,18 +572,18 @@ export class OpenAICanonicalEvaluationStrategy
 function convertResponsesAPIMessagesToLLMMessages(
   messages: Array<ResponseOutputItem | ResponseInputItem>
 ): LLMMessage[] {
-  const extracted_messages: LLMMessage[] = [];
+  const extractedMessages: LLMMessage[] = [];
 
   for (const message of messages) {
     if (message.type === 'function_call_output') {
-      extracted_messages.push({
+      extractedMessages.push({
         role: 'tool',
         content: message.output,
       });
       continue;
     }
     if (message.type === 'function_call') {
-      extracted_messages.push({
+      extractedMessages.push({
         role: 'assistant',
         tool_calls: [
           {
@@ -603,7 +603,7 @@ function convertResponsesAPIMessagesToLLMMessages(
     }
     // Handle simple string content messages
     if (typeof message.content === 'string') {
-      extracted_messages.push({
+      extractedMessages.push({
         role: message.role,
         content: message.content,
       });
@@ -618,6 +618,7 @@ function convertResponsesAPIMessagesToLLMMessages(
     let aggregatedToolCalls: LLMToolCall[] = [];
     let role = message.role;
 
+    // TODO: test
     for (const contentElement of message.content) {
       // Handle OpenAI Responses API specific content types
       switch (contentElement.type) {
@@ -649,13 +650,13 @@ function convertResponsesAPIMessagesToLLMMessages(
     if (aggregatedToolCalls.length > 0) {
       finalToolCalls = aggregatedToolCalls;
     }
-    extracted_messages.push({
+    extractedMessages.push({
         role,
         content: finalContent,
         tool_calls: finalToolCalls,
       });
   }
-  return extracted_messages;
+  return extractedMessages;
 }
 
 export function convertToolsToLLMDefinitions(

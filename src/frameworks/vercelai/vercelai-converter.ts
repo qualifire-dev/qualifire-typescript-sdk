@@ -59,7 +59,7 @@ export class VercelAICanonicalEvaluationStrategy
     request: VercelAICanonicalEvaluationStrategyRequest
   ): Promise<EvaluationProxyAPIRequest> {
     const messages: LLMMessage[] = [];
-    let available_tools: LLMToolDefinition[] = [];
+    let availableTools: LLMToolDefinition[] = [];
 
     // Handle system message
     if (request?.system) {
@@ -85,12 +85,12 @@ export class VercelAICanonicalEvaluationStrategy
 
     // Handle tools
     if (request?.tools) {
-      available_tools = this.convertToolsToLLMDefinitions(request.tools);
+      availableTools = this.convertToolsToLLMDefinitions(request.tools);
     }
 
     return {
       messages,
-      available_tools,
+      available_tools: availableTools,
     };
   }
 
@@ -186,11 +186,11 @@ export class VercelAICanonicalEvaluationStrategy
   private convertRequestMessageToLLMMessages(
     messages: ModelMessage[]
   ): LLMMessage[] {
-    const extracted_messages: LLMMessage[] = [];
+    const extractedMessages: LLMMessage[] = [];
 
     for (const message of messages) {
       if (typeof message.content === 'string') {
-        extracted_messages.push({
+        extractedMessages.push({
           role: message.role,
           content: message.content,
         });
@@ -200,7 +200,7 @@ export class VercelAICanonicalEvaluationStrategy
       switch (message.role) {
         case 'system':
           const systemMessage = message as SystemModelMessage;
-          extracted_messages.push({
+          extractedMessages.push({
             role: 'system',
             content: systemMessage.content,
           });
@@ -208,7 +208,7 @@ export class VercelAICanonicalEvaluationStrategy
         case 'user':
           const userMessage = message as UserModelMessage;
           if (typeof userMessage.content === 'string') {
-            extracted_messages.push({
+            extractedMessages.push({
               role: 'user',
               content: userMessage.content,
             });
@@ -216,7 +216,7 @@ export class VercelAICanonicalEvaluationStrategy
             const textParts = userMessage.content.filter(
               part => part.type === 'text'
             ) as TextPart[];
-            extracted_messages.push({
+            extractedMessages.push({
               role: 'user',
               content: textParts
                 .map(part => part.text)
@@ -228,7 +228,7 @@ export class VercelAICanonicalEvaluationStrategy
         case 'assistant':
           const assistantMessage = message as AssistantModelMessage;
           if (typeof assistantMessage.content === 'string') {
-            extracted_messages.push({
+            extractedMessages.push({
               role: 'assistant',
               content: assistantMessage.content,
             });
@@ -242,7 +242,7 @@ export class VercelAICanonicalEvaluationStrategy
               ) as ToolCallPart[]
             );
 
-            extracted_messages.push({
+            extractedMessages.push({
               role: 'assistant',
               content: textParts
                 .map(part => part.text)
@@ -255,7 +255,7 @@ export class VercelAICanonicalEvaluationStrategy
         case 'tool':
           const toolMessage = message as ToolModelMessage;
           const toolContent = extractToolContent(toolMessage);
-          extracted_messages.push({
+          extractedMessages.push({
             role: 'tool',
             content: toolContent,
           });
@@ -266,7 +266,7 @@ export class VercelAICanonicalEvaluationStrategy
           );
       }
     }
-    return extracted_messages;
+    return extractedMessages;
   }
 }
 

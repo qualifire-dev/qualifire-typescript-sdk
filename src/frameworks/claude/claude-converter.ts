@@ -207,7 +207,7 @@ export class ClaudeCanonicalEvaluationStrategy
 
   // Claude-specific function to convert Response API messages to LLM messages
   private convertClaudeMessagesToLLMMessages(messages: Array<Message>): LLMMessage[] {
-    const extracted_messages: LLMMessage[] = [];
+    const extractedMessages: LLMMessage[] = [];
 
     for (const message of messages) {
       if (typeof message.content === 'string') {
@@ -215,7 +215,7 @@ export class ClaudeCanonicalEvaluationStrategy
           role: message.role,
           content: message.content,
         };
-        extracted_messages.push(llmMessage);
+        extractedMessages.push(llmMessage);
         continue;
       }
       const aggregatedContent: string[] = [];
@@ -273,9 +273,9 @@ export class ClaudeCanonicalEvaluationStrategy
         if (aggregatedToolCalls.length > 0) {
           accumulatedMessage.tool_calls = aggregatedToolCalls;
         }
-        extracted_messages.push(accumulatedMessage);
+        extractedMessages.push(accumulatedMessage);
       }
     }
-    return extracted_messages;
+    return extractedMessages;
   }
 }
