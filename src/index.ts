@@ -61,10 +61,11 @@ export class Qualifire {
    * Evaluates the output of a model against a set of criteria.
    *
    * This function supports two modes:
-   * 1. Direct messages mode: If `messages`, `input` or `output` are provided, they are sent as-is to the proxy without conversion
-   * 2. Framework converter mode: If `request` and `response` are provided, they are converted using the specified framework converter
+   * 1. Request-Response mode: If `request`, `response` and `framework` are provided, they fully analyzed by the Qualifire API
+   * 2. Fine-grained messages mode: If `messages`, `input` or `output` are provided, they are sent specifically to the Qualifire API
    * 
-   * Note: If both `messages` and `request`/`response` are provided, `messages` takes precedence.
+   * Supported frameworks are: openai, vercelai, gemini, claude
+   * Note: Direct messages are deprecated, but still supported for backward compatibility.
    *
    * @param EvaluationRequestV2 - The evaluation request with either direct messages or framework-specific request/response
    * @returns An object containing the evaluation results.
@@ -72,28 +73,77 @@ export class Qualifire {
    * @example
    * ```ts
    * const qualifire = new Qualifire();
+   *
+   * // Request-Response mode
+   * const openAiRequest = {
+   * model: 'gpt-4o',
+   *  messages: [
+   *    {
+   *      role: 'system',
+   *      content: 'You are a helpful assistant that can answer questions.',
+   *    },
+   *    {
+   *      role: 'user',
+   *      content: [
+   *        {
+   *          type: 'text',
+   *          text: 'Are the sky blue?',
+   *        },
+   *      ],
+   *    },
+   *  ],
+   * };
    * 
-   * // Direct messages mode (no conversion)
-   * const response1 = await qualifire.evaluate({
+   * const openAiResponse = await openaiClient.chat.completions.create(
+   *   openAiRequest
+   * );
+   * 
+   * const qualifireResponse = await qualifireClient.evaluate({
+   *  framework: 'openai',
+   *  request: openaiRequest, // As given to openaiClient.chat.completions.create(), openaiClient.responses.create()
+   *  response: openaiResponse, // Response as returned by openaiClient.chat.completions.create() or openaiClient.responses.create()
+   *  dangerousContentCheck: true,
+   *  groundingCheck: true,
+   *  hallucinationsCheck: true,
+   *  harassmentCheck: true,
+   *  hateSpeechCheck: true,
+   *  instructionsFollowingCheck: true,
+   *  piiCheck: true,
+   *  promptInjections: true,
+   *  sexualContentCheck: true,
+   *  toolSelectionQualityCheck: false,
+   * });
+   * 
+   * // Fine-grained messages mode
+   * const response2 = await qualifire.evaluate({
    *   messages: [
    *     { role: 'user', content: 'What is the capital of France?' },
    *     { role: 'assistant', content: 'Paris' }
    *   ],
-   *   assertions: ['capital'],
-   *   dangerousContentCheck: true,
-   *   hallucinationsCheck: true,
-   * });
-   * 
-   * // Framework converter mode
-   * const response2 = await qualifire.evaluate({
-   *   framework: 'openai',
-   *   request: openaiRequest,
-   *   response: openaiResponse,
-   *   assertions: ['capital'],
    *   dangerousContentCheck: true,
    *   hallucinationsCheck: true,
    * });
    * ```
+   * 
+   * // A typical output for qualifire response would be:
+   * Qualifire response: {
+   *  "status": "failed",
+   *  "score": 75,
+   *  "evaluationResults": [
+   *    {
+   *      "type": "grounding",
+   *      "results": [
+   *        {
+   *          "name": "grounding",
+   *          "score": 75,
+   *          "label": "INFERABLE",
+   *          "confidence_score": 100,
+   *          "reason": "The AI's output provides a detailed scientific explanation for why the sky is blue, which is a direct answer to the user's question. While the prompt itself doesn't contain the information about Rayleigh scattering or light wavelengths, the AI's role as a 'helpful assistant that can answer questions' implies it should provide accurate and relevant information. The claims are inferable as they are a logical and scientifically accurate expansion on the simple 'yes' or 'no' implied by the question, providing the 'why' behind the sky's color."
+   *        }
+   *      ]
+   *    }
+   *  ]
+   * }
    */
   evaluate = async (evaluationRequest: EvaluationProxyAPIRequest | EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
     // If messages are provided directly, use them as-is without conversion
