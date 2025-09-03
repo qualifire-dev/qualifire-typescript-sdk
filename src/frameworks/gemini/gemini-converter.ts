@@ -1,3 +1,4 @@
+import { Content, ContentListUnion, Part } from '@google/genai';
 import {
   EvaluationProxyAPIRequest,
   LLMMessage,
@@ -5,7 +6,6 @@ import {
   LLMToolDefinition,
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
-import { Content, Part, ContentListUnion } from '@google/genai';
 type GeminiAICanonicalEvaluationStrategyResponse = any;
 type GeminiAICanonicalEvaluationStrategyRequest = any;
 
@@ -31,7 +31,7 @@ export class GeminiAICanonicalEvaluationStrategy
     if (!response) {
       return {
         messages,
-        available_tools: availableTools,
+        available_tools,
       };
     }
 

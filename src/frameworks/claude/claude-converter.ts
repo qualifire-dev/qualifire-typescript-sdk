@@ -1,3 +1,19 @@
+import { Message, type MessageCreateParams, type MessageStreamParams } from '@anthropic-ai/sdk/resources';
+import {
+  MessageStreamEvent,
+  RawMessageStreamEvent,
+  type ContentBlockParam,
+  type InputJSONDelta,
+  type RawContentBlockDeltaEvent,
+  type RawContentBlockStartEvent,
+  type RawMessageStartEvent,
+  type TextBlock,
+  type TextBlockParam,
+  type TextDelta,
+  type ThinkingBlock,
+  type ToolResultBlockParam,
+  type ToolUseBlock
+} from '@anthropic-ai/sdk/resources/messages';
 import {
   EvaluationProxyAPIRequest,
   LLMMessage,
@@ -5,23 +21,6 @@ import {
   LLMToolDefinition,
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
-import { type MessageCreateParams, type MessageStreamParams} from '@anthropic-ai/sdk/resources';
-import { Message } from '@anthropic-ai/sdk/resources';
-import { RawMessageStreamEvent, MessageStreamEvent,
-  type TextBlock,
-  type RawMessageStartEvent,
-  type RawContentBlockStartEvent,
-  type RawContentBlockDeltaEvent,
-  type RawContentBlockStopEvent,
-  type ContentBlock,
-  type ThinkingBlock,
-  type ToolUseBlock,
-  type ContentBlockParam,
-  type ToolResultBlockParam,
-  type TextBlockParam,
-  type TextDelta,
-  type InputJSONDelta,
-} from '@anthropic-ai/sdk/resources/messages';
 
 type AnthropicCreateAPIResponsesType = Message | RawMessageStreamEvent;
 

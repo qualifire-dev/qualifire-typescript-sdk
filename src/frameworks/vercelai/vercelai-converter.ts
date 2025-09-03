@@ -1,21 +1,21 @@
-import { z } from 'zod';
-import {
-  EvaluationProxyAPIRequest,
-  LLMMessage,
-  LLMToolDefinition,
-  LLMToolCallSchema,
-  LLMToolCall,
-} from '../../types';
-import { CanonicalEvaluationStrategy } from '../canonical';
 import {
   AssistantModelMessage,
   ModelMessage,
   SystemModelMessage,
-  ToolModelMessage,
-  UserModelMessage,
   TextPart,
   ToolCallPart,
+  ToolModelMessage,
+  UserModelMessage,
 } from '@ai-sdk/provider-utils';
+import { z } from 'zod';
+import {
+  EvaluationProxyAPIRequest,
+  LLMMessage,
+  LLMToolCall,
+  LLMToolCallSchema,
+  LLMToolDefinition,
+} from '../../types';
+import { CanonicalEvaluationStrategy } from '../canonical';
 
 type VercelAICanonicalEvaluationStrategyResponse = any;
 type VercelAICanonicalEvaluationStrategyRequest = any;

@@ -9,29 +9,26 @@ import { CanonicalEvaluationStrategy } from '../canonical';
 import {
   ChatCompletion,
   ChatCompletionChunk,
-  type ChatCompletionMessageParam,
-  type ChatCompletionDeveloperMessageParam,
-  type ChatCompletionContentPartText,
   type ChatCompletionAssistantMessageParam,
-  type ChatCompletionToolMessageParam,
   type ChatCompletionContentPartRefusal,
+  type ChatCompletionContentPartText,
+  type ChatCompletionDeveloperMessageParam,
+  type ChatCompletionMessageParam,
+  type ChatCompletionToolMessageParam,
 } from 'openai/resources/chat/completions';
 import {
+  ChatCompletionCreateParamsBase,
   ChatCompletionCreateParamsNonStreaming,
   ChatCompletionCreateParamsStreaming,
-  ChatCompletionCreateParamsBase,
 } from 'openai/resources/chat/completions/completions';
 import {
   Response,
+  ResponseCreateParamsBase,
   ResponseCreateParamsNonStreaming,
   ResponseCreateParamsStreaming,
-  ResponseCreateParamsBase,
   ResponseStreamEvent,
-  type ResponseOutputItem,
   type ResponseInputItem,
-  ResponseFunctionWebSearch,
-  ResponseFileSearchToolCall,
-  ResponseFunctionToolCall,
+  type ResponseOutputItem,
 } from 'openai/resources/responses/responses';
 
 type OpenAIResponseCreateRequest =
