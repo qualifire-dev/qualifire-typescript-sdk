@@ -106,8 +106,11 @@ export class VercelAICanonicalEvaluationStrategy
     // Handle streaming text content
     const mergedContent = [];
 
-    const textStreams = response.textStream.tee();
-    for await (const textPart of textStreams[0]) {
+    /*
+    response.textStream is teeing a new stream in the vercelai. So the original stream is not consumed by this loop.
+    https://github.com/vercel/ai/blob/49edef78bfd72b348a5eb4857ab901f47c0b5ddb/packages/ai/src/generate-text/stream-text.ts#L1616
+    */
+    for await (const textPart of response.textStream) {
       mergedContent.push(textPart);
     }
 
