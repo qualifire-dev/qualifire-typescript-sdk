@@ -208,14 +208,6 @@ export class VercelAICanonicalEvaluationStrategy
     const extractedMessages: LLMMessage[] = [];
 
     for (const message of messages) {
-      if (typeof message.content === 'string') {
-        extractedMessages.push({
-          role: message.role,
-          content: message.content,
-        });
-        continue;
-      }
-
       switch (message.role) {
         case 'system':
           const systemMessage = message as SystemModelMessage;
@@ -296,10 +288,11 @@ function extractToolContent(toolMessage: ToolModelMessage): string {
   }
   const content = toolMessage.content;
   if (content.length !== 1) {
-    return '';
+    console.debug(`Qualifire only supports one content per tool message: ${JSON.stringify(content)}`);
   }
   const firstContent = content[0];
   if (firstContent.type !== 'tool-result') {
+    console.debug(`Expected tool-result in the first content of a tool message. Seems like invalid tool was given.`);
     return '';
   }
   // LanguageModelV2ToolResultOutput is not exported unfortunaly so we have to use this type

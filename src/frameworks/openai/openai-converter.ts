@@ -370,6 +370,11 @@ export class OpenAICanonicalEvaluationStrategy
 
     // After processing all chunks, create the final accumulated message
     // Handle tool call case - tool calls are always from assistant role
+
+    const outputMessage: LLMMessage = {
+      role: messageRole ?? 'assistant',
+    }
+
     if (toolName && toolId) {
       let parsedArguments = {};
       try {
@@ -379,23 +384,21 @@ export class OpenAICanonicalEvaluationStrategy
         parsedArguments = {};
       }
 
-      const toolCallMessage: LLMMessage = {
-        role: 'assistant',
-        tool_calls: [{
-          name: toolName,
-          arguments: parsedArguments,
-          id: toolId,
-        }],
-      };
-      messages.push(toolCallMessage);
+      outputMessage.tool_calls = [{
+        name: toolName,
+        arguments: parsedArguments,
+        id: toolId,
+      }];
     }
     // Handle regular message case - only if we have content and no tool call
     else if (messageRole && accumulatedContent) {
-      const contentMessage: LLMMessage = {
-        role: messageRole,
-        content: accumulatedContent,
-      };
-      messages.push(contentMessage);
+      outputMessage.content = accumulatedContent;
+    }
+
+    if (outputMessage.content || outputMessage.tool_calls) {
+      messages.push(outputMessage);
+    } else {
+      console.debug('Invalid empty content message: ' + JSON.stringify(outputMessage));
     }
 
     return messages;
@@ -587,8 +590,7 @@ function convertResponsesAPIMessagesToLLMMessages(
         content: message.output,
       });
       continue;
-    }
-    if (message.type === 'function_call') {
+    } else if (message.type === 'function_call') {
       extractedMessages.push({
         role: 'assistant',
         tool_calls: [
@@ -600,11 +602,8 @@ function convertResponsesAPIMessagesToLLMMessages(
         ],
       });
       continue;
-    }
-
-
-    if (message.type !== 'message') {
-      console.debug('Invalid OpenAI Responses API output: message - ' + JSON.stringify(message));
+    } else if (message.type !== 'message') {
+      console.debug('Invalid OpenAI Responses API: message - ' + JSON.stringify(message));
       continue;
     }
     // Handle simple string content messages
@@ -636,7 +635,7 @@ function convertResponsesAPIMessagesToLLMMessages(
           break;
         default:
           console.debug(
-            'Invalid OpenAI Responses API output: message - ' +
+            'Invalid OpenAI Responses API: message - ' +
               JSON.stringify(message) +
               ' contentElement - ' +
               JSON.stringify(contentElement)

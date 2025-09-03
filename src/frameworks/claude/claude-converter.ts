@@ -205,9 +205,12 @@ export class ClaudeCanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    if (response?.role) {
-      messages.push(...this.convertClaudeMessagesToLLMMessages([response] as Array<Message>));
+    if (response.role !== 'assistant') {
+      throw new Error(
+        `Response role must be 'assistant'. Make sure to use response 
+        from anthropic.messages.create() when not using streaming.`);
     }
+    messages.push(...this.convertClaudeMessagesToLLMMessages([response] as Array<Message>));
 
     return messages;
   }

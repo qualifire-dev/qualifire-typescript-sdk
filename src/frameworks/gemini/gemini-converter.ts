@@ -60,7 +60,7 @@ export class GeminiAICanonicalEvaluationStrategy
     // Handle available tools
     if (request?.config?.tools && request.config.tools.length > 0) {
       for (const tool of request.config.tools) {
-        if (tool.functionDeclarations && tool.functionDeclarations.length > 0) {
+        if (tool?.functionDeclarations?.length > 0) {
           for (const functionDeclaration of tool.functionDeclarations) {
             available_tools.push({
               name: functionDeclaration.name,
@@ -118,7 +118,7 @@ export class GeminiAICanonicalEvaluationStrategy
     };
   }
 
-  private async handleResponse(
+  private async handleNonStreamingResponse(
     response: GeminiAICanonicalEvaluationStrategyResponse
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
@@ -205,12 +205,6 @@ export class GeminiAICanonicalEvaluationStrategy
     }
 
     return messages;
-  }
-
-  private async handleNonStreamingResponse(
-    response: GeminiAICanonicalEvaluationStrategyResponse
-  ): Promise<LLMMessage[]> {
-    return this.handleResponse(response);
   }
 }
 
