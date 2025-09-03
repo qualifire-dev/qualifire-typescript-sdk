@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// Framework type based on supported frameworks
+const FrameworkEnum = ['openai', 'vercelai', 'gemini', 'claude'] as const;
+export type Framework = typeof FrameworkEnum[number];
+
 export const messageSchema = z.object({
   role: z.string(),
   content: z.string().nullable(),
@@ -36,13 +40,12 @@ export const outputSchema = z.object({
 
 export type Output = z.infer<typeof outputSchema> | string;
 
-const LLMToolDefinitionSchema = z.object({
+export const LLMToolDefinitionSchema = z.object({
   name: z.string(),
   description: z.string(),
   parameters: z.record(z.string(), z.any()),
 });
-
-const LLMToolCallSchema = z.object({
+export const LLMToolCallSchema = z.object({
   name: z.string(),
   arguments: z.record(z.string(), z.any()),
   id: z.string().optional(),
@@ -54,28 +57,104 @@ const LLMMessageSchema = z.object({
   tool_calls: z.array(LLMToolCallSchema).optional(),
 });
 
+export type LLMMessage = z.infer<typeof LLMMessageSchema>;
+
 const SyntaxCheckArgsSchema = z.object({
   args: z.string(),
 });
 
-export const EvaluationRequestSchema = z
+export const EvaluationRequestV2Schema = z.object({
+  framework: z.enum(FrameworkEnum),
+  request: z.any().optional(),
+  response: z.any().optional(),
+  /** @deprecated Use request/response instead */
+  input: z.string().optional(),
+  /** @deprecated Use request/response instead */
+  output: z.string().optional(),
+  /** @deprecated Use request/response instead */
+  messages: z.array(LLMMessageSchema).optional(),
+  dangerousContentCheck: z.boolean().default(false).optional(),
+  groundingCheck: z.boolean().default(false).optional(),
+  hallucinationsCheck: z.boolean().default(false).optional(),
+  harassmentCheck: z.boolean().default(false).optional(),
+  hateSpeechCheck: z.boolean().default(false).optional(),
+  instructionsFollowingCheck: z.boolean().default(false).optional(),
+  piiCheck: z.boolean().default(false).optional(),
+  promptInjections: z.boolean().default(false).optional(),
+  sexualContentCheck: z.boolean().default(false).optional(),
+  syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+  toolSelectionQualityCheck: z.boolean().default(false).optional(),
+  assertions: z.array(z.string()).optional(),
+  /** @deprecated Automatically added from the request*/
+  available_tools: z.array(LLMToolDefinitionSchema).optional(),
+  /** @deprecated Use dangerousContentCheck instead */
+  dangerous_content_check: z.boolean().default(false).optional(),
+  /** @deprecated Use groundingCheck instead */
+  grounding_check: z.boolean().default(false).optional(),
+  /** @deprecated Use hallucinationsCheck instead */
+  hallucinations_check: z.boolean().default(false).optional(),
+  /** @deprecated Use harassmentCheck instead */
+  harassment_check: z.boolean().default(false).optional(),
+  /** @deprecated Use hateSpeechCheck instead */
+  hate_speech_check: z.boolean().default(false).optional(),
+  /** @deprecated Use instructionsFollowingCheck instead */
+  instructions_following_check: z.boolean().default(false).optional(),
+  /** @deprecated Use piiCheck instead */
+  pii_check: z.boolean().default(false).optional(),
+  /** @deprecated Use promptInjections instead */
+  prompt_injections: z.boolean().default(false).optional(),
+  /** @deprecated Use sexualContentCheck instead */
+  sexual_content_check: z.boolean().default(false).optional(),
+  /** @deprecated Use syntaxChecks instead */
+  syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+  /** @deprecated Use toolSelectionQualityCheck instead */
+  tool_selection_quality_check: z.boolean().default(false).optional(),
+});
+
+export const EvaluationProxyAPIRequestSchema = z
   .object({
+    /** @deprecated Use request/response instead */
     input: z.string().optional(),
+    /** @deprecated Use request/response instead */
     output: z.string().optional(),
+    /** @deprecated Use request/response instead */
     messages: z.array(LLMMessageSchema).optional(),
+    /** @deprecated Use request/response instead */
     available_tools: z.array(LLMToolDefinitionSchema).optional(),
+    /** @deprecated Use dangerousContentCheck instead */
     dangerous_content_check: z.boolean().default(false),
+    /** @deprecated Use groundingCheck instead */
     grounding_check: z.boolean().default(false),
+    /** @deprecated Use hallucinationsCheck instead */
     hallucinations_check: z.boolean().default(false),
+    /** @deprecated Use harassmentCheck instead */
     harassment_check: z.boolean().default(false),
+    /** @deprecated Use hateSpeechCheck instead */
     hate_speech_check: z.boolean().default(false),
+    /** @deprecated Use instructionsFollowingCheck instead */
     instructions_following_check: z.boolean().default(false),
+    /** @deprecated Use piiCheck instead */
     pii_check: z.boolean().default(false),
+    /** @deprecated Use promptInjections instead */
     prompt_injections: z.boolean().default(false),
+    /** @deprecated Use sexualContentCheck instead */
     sexual_content_check: z.boolean().default(false),
+    /** @deprecated Use syntaxChecks instead */
     syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+    /** @deprecated Use toolSelectionQualityCheck instead */
     tool_selection_quality_check: z.boolean().default(false),
     assertions: z.array(z.string()).optional(),
+    dangerousContentCheck: z.boolean().default(false).optional(),
+    groundingCheck: z.boolean().default(false).optional(),
+    hallucinationsCheck: z.boolean().default(false).optional(),
+    harassmentCheck: z.boolean().default(false).optional(),
+    hateSpeechCheck: z.boolean().default(false).optional(),
+    instructionsFollowingCheck: z.boolean().default(false).optional(),
+    piiCheck: z.boolean().default(false).optional(),
+    promptInjections: z.boolean().default(false).optional(),
+    sexualContentCheck: z.boolean().default(false).optional(),
+    syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+    toolSelectionQualityCheck: z.boolean().default(false).optional(),
   })
   .superRefine((data, ctx) => {
     const hasMessages =
@@ -138,5 +217,10 @@ const EvaluationResponseSchema = z.object({
   status: z.string(),
 });
 
-export type EvaluationRequest = z.input<typeof EvaluationRequestSchema>;
+export type EvaluationProxyAPIRequest = z.input<
+  typeof EvaluationProxyAPIRequestSchema
+>;
 export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
+export type LLMToolDefinition = z.infer<typeof LLMToolDefinitionSchema>;
+export type LLMToolCall = z.infer<typeof LLMToolCallSchema>;
+export type EvaluationRequestV2 = z.infer<typeof EvaluationRequestV2Schema>;

@@ -1,7 +1,16 @@
-import { EvaluationRequestSchema, type EvaluationRequest, type EvaluationResponse } from './types';
 import * as traceloop from '@traceloop/node-server-sdk';
+import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-converter';
+import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
+import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
+import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
+import { EvaluationProxyAPIRequest, EvaluationProxyAPIRequestSchema, EvaluationRequestV2Schema, type EvaluationRequestV2, type EvaluationResponse, type Framework } from './types';
+import { CanonicalEvaluationStrategy } from './frameworks/canonical';
 
-export { EvaluationRequest, EvaluationResponse } from './types';
+export type {
+  EvaluationRequestV2,
+  EvaluationProxyAPIRequest,
+  EvaluationResponse, Framework, LLMMessage
+} from './types';
 
 
 /**
@@ -16,7 +25,8 @@ export class Qualifire {
 
   /**
    * Creates an instance of the Qualifire class.
-   * @param apiKey - The API key for the Qualifire SDK.   * @param baseUrl - The base URL for the Qualifire API.
+   * @param apiKey - The API key for the Qualifire SDK.
+   * @param baseUrl - The base URL for the Qualifire API.
    */
   constructor({ apiKey, baseUrl }: { apiKey?: string; baseUrl?: string }) {
     const key = apiKey || process.env.QUALIFIRE_API_KEY;
@@ -33,7 +43,7 @@ export class Qualifire {
     this.baseUrl = qualifireBaseUrl;
   }
 
-  init() {
+  init(): void {
     process.env.TRACELOOP_TELEMETRY = 'false';
 
     traceloop.initialize({
@@ -50,34 +60,167 @@ export class Qualifire {
   /**
    * Evaluates the output of a model against a set of criteria.
    *
-   * @param request - The EvaluationRequest to send.
+   * This function supports two modes:
+   * 1. Request-Response mode: If `request`, `response` and `framework` are provided, they fully analyzed by the Qualifire API
+   * 2. Fine-grained messages mode: If `messages`, `input` or `output` are provided, they are sent specifically to the Qualifire API
+   * 
+   * Supported frameworks are: openai, vercelai, gemini, claude
+   * Note: Direct messages are deprecated, but still supported for backward compatibility.
+   *
+   * @param EvaluationRequestV2 - The evaluation request with either direct messages or framework-specific request/response
    * @returns An object containing the evaluation results.
    *
    * @example
    * ```ts
    * const qualifire = new Qualifire();
-   * const response = await qualifire.evaluate({
-   *   input: 'What is the capital of France?',
-   *   output: 'Paris',
-   *   assertions: ['capital'],
-   *   consistencyCheck: true,
+   *
+   * // Request-Response mode
+   * const openAiRequest = {
+   * model: 'gpt-4o',
+   *  messages: [
+   *    {
+   *      role: 'system',
+   *      content: 'You are a helpful assistant that can answer questions.',
+   *    },
+   *    {
+   *      role: 'user',
+   *      content: [
+   *        {
+   *          type: 'text',
+   *          text: 'Are the sky blue?',
+   *        },
+   *      ],
+   *    },
+   *  ],
+   * };
+   * 
+   * const openAiResponse = await openaiClient.chat.completions.create(
+   *   openAiRequest
+   * );
+   * 
+   * const qualifireResponse = await qualifireClient.evaluate({
+   *  framework: 'openai',
+   *  request: openaiRequest, // As given to openaiClient.chat.completions.create(), openaiClient.responses.create()
+   *  response: openaiResponse, // Response as returned by openaiClient.chat.completions.create() or openaiClient.responses.create()
+   *  dangerousContentCheck: true,
+   *  groundingCheck: true,
+   *  hallucinationsCheck: true,
+   *  harassmentCheck: true,
+   *  hateSpeechCheck: true,
+   *  instructionsFollowingCheck: true,
+   *  piiCheck: true,
+   *  promptInjections: true,
+   *  sexualContentCheck: true,
+   *  toolSelectionQualityCheck: false,
+   * });
+   * 
+   * // If you are using streaming mode.
+   * const openAiRequestStream = {
+   *  stream: true,
+   *  model: 'gpt-4o',
+   *  messages: [
+   *    {
+   *      role: 'system',
+   *      content: 'You are a helpful assistant that can answer questions.',
+   *    },
+   *    {
+   *      role: 'user',
+   *      content: [
+   *        {
+   *          type: 'text',
+   *          text: 'Are the sky blue?',
+   *        },
+   *      ],
+   *    },
+   *  ],
+   * };
+   * 
+   * const openAiResponseStream = await openaiClient.chat.completions.create(
+   *   openAiRequestStream
+   * );
+   * 
+   * let ResponseChunks: any[] = [];
+   * for await (const chunk of openAiResponseStream) {
+   *   ResponseChunks.push(chunk);
+   * }
+   *
+   * const qualifireResponse = await qualifireClient.evaluate({
+   *   framework: 'openai',
+   *   request: openAiRequestStream,
+   *   response: ResponseChunks,
+   *   groundingCheck: true,
+   *   promptInjections: true,
+   * });
+   * 
+   * // Fine-grained messages mode
+   * const response2 = await qualifire.evaluate({
+   *   messages: [
+   *     { role: 'user', content: 'What is the capital of France?' },
+   *     { role: 'assistant', content: 'Paris' }
+   *   ],
    *   dangerousContentCheck: true,
    *   hallucinationsCheck: true,
-   *   harassmentCheck: true,
-   *   hateSpeechCheck: true,
-   *   piiCheck: true,
-   *   promptInjections: true,
-   *   sexualContentCheck: true,
    * });
    * ```
+   * 
+   * // A typical output for qualifire response would be:
+   * Qualifire response: {
+   *  "status": "failed",
+   *  "score": 75,
+   *  "evaluationResults": [
+   *    {
+   *      "type": "grounding",
+   *      "results": [
+   *        {
+   *          "name": "grounding",
+   *          "score": 75,
+   *          "label": "INFERABLE",
+   *          "confidence_score": 100,
+   *          "reason": "The AI's output provides a detailed scientific explanation for why the sky is blue."
+   *        }
+   *      ]
+   *    }
+   *  ]
+   * }
    */
-  evaluate = async (
-    request: EvaluationRequest
-  ): Promise<EvaluationResponse | undefined> => {
-    const parsedRequest = EvaluationRequestSchema.parse(request)
+  evaluate = async (evaluationRequest: EvaluationProxyAPIRequest | EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
+    // If messages are provided directly, use them as-is without conversion
+    const parseEvaluationProxyAPIRequest = EvaluationProxyAPIRequestSchema.safeParse(evaluationRequest)
+    if (parseEvaluationProxyAPIRequest.success) {
+      return this.evaluateWithBackwardCompatibility(parseEvaluationProxyAPIRequest.data as EvaluationProxyAPIRequest);
+    }
 
+    const parseEvaluationRequestResultV2 = EvaluationRequestV2Schema.safeParse(evaluationRequest)
+    if (parseEvaluationRequestResultV2.success) {
+      return this.evaluateWithConverters(parseEvaluationRequestResultV2.data );
+    }
+    
+    throw new Error(`Invalid evaluation request format: ${JSON.stringify(evaluationRequest)}`);
+  };
+
+  /**
+   * Evaluates using direct messages without conversion (overrides request/response if both are provided)
+   */
+  private evaluateWithBackwardCompatibility = async (evaluationProxyAPIRequest: EvaluationProxyAPIRequest): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
-    const body = JSON.stringify(parsedRequest);
+    const body = {
+      input: evaluationProxyAPIRequest.input,
+      output: evaluationProxyAPIRequest.output,
+      messages: evaluationProxyAPIRequest.messages,
+      available_tools: evaluationProxyAPIRequest.available_tools,
+      dangerous_content_check: evaluationProxyAPIRequest.dangerous_content_check || evaluationProxyAPIRequest.dangerousContentCheck,
+      grounding_check: evaluationProxyAPIRequest.grounding_check || evaluationProxyAPIRequest.groundingCheck,
+      hallucinations_check: evaluationProxyAPIRequest.hallucinations_check || evaluationProxyAPIRequest.hallucinationsCheck,
+      harassment_check: evaluationProxyAPIRequest.harassment_check || evaluationProxyAPIRequest.harassmentCheck,
+      hate_speech_check: evaluationProxyAPIRequest.hate_speech_check || evaluationProxyAPIRequest.hateSpeechCheck,
+      instructions_following_check: evaluationProxyAPIRequest.instructions_following_check || evaluationProxyAPIRequest.instructionsFollowingCheck,
+      pii_check: evaluationProxyAPIRequest.pii_check || evaluationProxyAPIRequest.piiCheck,
+      prompt_injections: evaluationProxyAPIRequest.prompt_injections || evaluationProxyAPIRequest.promptInjections,
+      sexual_content_check: evaluationProxyAPIRequest.sexual_content_check || evaluationProxyAPIRequest.sexualContentCheck,
+      syntax_checks: evaluationProxyAPIRequest.syntax_checks || evaluationProxyAPIRequest.syntaxChecks,
+      tool_selection_quality_check: evaluationProxyAPIRequest.tool_selection_quality_check || evaluationProxyAPIRequest.toolSelectionQualityCheck,
+      assertions: evaluationProxyAPIRequest.assertions,
+    };
 
     const headers = {
       'Content-Type': 'application/json',
@@ -87,7 +230,67 @@ export class Qualifire {
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body,
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Qualifire API error: ${response.statusText}`);
+    }
+
+    const jsonResponse = await response.json();
+    return jsonResponse as EvaluationResponse;
+  };
+
+  /**
+   * Evaluates using framework converters for request/response
+   */
+  private evaluateWithConverters = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
+    const frameworkConverters: Record<Framework, () => CanonicalEvaluationStrategy<any, any>> = {
+      'openai': () => new OpenAICanonicalEvaluationStrategy(),
+      'vercelai': () => new VercelAICanonicalEvaluationStrategy(),
+      'gemini': () => new GeminiAICanonicalEvaluationStrategy(),
+      'claude': () => new ClaudeCanonicalEvaluationStrategy(),
+    };
+
+    const supportedFrameworks = Object.keys(frameworkConverters);
+    const converterFactory = frameworkConverters[EvaluationRequestV2.framework];
+    
+    if (!converterFactory) {
+      throw new Error(`Unsupported framework: ${EvaluationRequestV2.framework}. Supported frameworks: ${supportedFrameworks.join(', ')}`);
+    }
+
+    const requestConverter = converterFactory();
+
+    
+    const evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(EvaluationRequestV2.request, EvaluationRequestV2.response)
+
+    const url = `${this.baseUrl}/api/evaluation/evaluate`;
+    const body = {
+      messages: evaluationRequest.messages,
+      available_tools: evaluationRequest.available_tools,
+      dangerous_content_check: EvaluationRequestV2.dangerousContentCheck,
+      grounding_check: EvaluationRequestV2.groundingCheck,
+      hallucinations_check: EvaluationRequestV2.hallucinationsCheck,
+      harassment_check: EvaluationRequestV2.harassmentCheck,
+      hate_speech_check: EvaluationRequestV2.hateSpeechCheck,
+      instructions_following_check: EvaluationRequestV2.instructionsFollowingCheck,
+      pii_check: EvaluationRequestV2.piiCheck,
+      prompt_injections: EvaluationRequestV2.promptInjections,
+      sexual_content_check: EvaluationRequestV2.sexualContentCheck,
+      syntax_checks: EvaluationRequestV2.syntaxChecks,
+      tool_selection_quality_check: EvaluationRequestV2.toolSelectionQualityCheck,
+      assertions: EvaluationRequestV2.assertions,
+    };
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Qualifire-API-Key': this.sdkKey,
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
