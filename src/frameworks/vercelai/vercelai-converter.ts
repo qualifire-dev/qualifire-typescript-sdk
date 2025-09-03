@@ -38,6 +38,14 @@ export class VercelAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = requestMessages || [];
     const availableTools: LLMToolDefinition[] = requestAvailableTools || [];
 
+    // Avoid undefined response
+    if (!response) {
+      return {
+        messages,
+        available_tools: availableTools,
+      };
+    }
+
     // Check if response is streaming (has textStream property)
     if (response?.textStream) {
       const streamingResultMessages = await this.handleStreaming(response);

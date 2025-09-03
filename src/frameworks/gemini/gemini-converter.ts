@@ -27,6 +27,14 @@ export class GeminiAICanonicalEvaluationStrategy
     const messages: LLMMessage[] = requestMessages || [];
     const available_tools: LLMToolDefinition[] = requestAvailableTools || [];
 
+    // Avoid undefined response
+    if (!response) {
+      return {
+        messages,
+        available_tools: availableTools,
+      };
+    }
+
     if (Array.isArray(response)) {
       const streamingResultMessages = await this.handleStreaming(response);
       messages.push(...streamingResultMessages);

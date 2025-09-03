@@ -48,6 +48,14 @@ export class ClaudeCanonicalEvaluationStrategy
     const messages: LLMMessage[] = requestMessages || [];
     const availableTools: LLMToolDefinition[] = requestAvailableTools || [];
 
+    // Avoid undefined response
+    if (!response) {
+      return {
+        messages,
+        available_tools: availableTools,
+      };
+    }
+
     // Check if response is streaming or non-streaming
     if (Array.isArray(response)) {
       const streamingResultMessages = await this.handleStreaming(response as Array<MessageStreamEvent>);
