@@ -5,7 +5,7 @@ import {
   TextPart,
   ToolCallPart,
   ToolModelMessage,
-  UserModelMessage,
+  type UserModelMessage,
 } from '@ai-sdk/provider-utils';
 import { z } from 'zod';
 import {
