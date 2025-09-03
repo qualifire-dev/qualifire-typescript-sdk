@@ -618,7 +618,6 @@ function convertResponsesAPIMessagesToLLMMessages(
     let aggregatedToolCalls: LLMToolCall[] = [];
     let role = message.role;
 
-    // TODO: test
     for (const contentElement of message.content) {
       // Handle OpenAI Responses API specific content types
       switch (contentElement.type) {

@@ -5,7 +5,7 @@ import {
   LLMToolDefinition,
 } from '../../types';
 import { CanonicalEvaluationStrategy } from '../canonical';
-import { Content, Part } from '@google/genai';
+import { Content, Part, ContentListUnion } from '@google/genai';
 type GeminiAICanonicalEvaluationStrategyResponse = any;
 type GeminiAICanonicalEvaluationStrategyRequest = any;
 
@@ -64,44 +64,46 @@ export class GeminiAICanonicalEvaluationStrategy
       }
     }
 
-    // Handle request contents
-    if (request?.contents) {
+    let contents: Array<Content> = [];
+    if (request?.config?.systemInstruction) {
       /*
         Gemini request.contents is an object called contentListUnions which can be
         list of parts or content objects:
         https://github.com/googleapis/js-genai/blob/b5d77e1bfea5c6b4903bc7ade986e91d6e146835/src/types.ts#L1937
       */
-      let contentListUnions = request.contents;
-      if (!Array.isArray(contentListUnions)) {
-        contentListUnions = [contentListUnions];
-      }
+      const convertedSystemContent = convertContentListUnionsToContentList(
+        request.config.systemInstruction,
+        'system'
+      );
 
-      if (contentListUnions.length === 0) {
-        return {
-          messages: [],
-          available_tools,
-        };
-      }
-
-      let convertedContents: Array<Content> = [];
-      if (contentListUnions.every(isContent)) {
-        convertedContents = contentListUnions as Array<Content>;
-      } else if (contentListUnions.every(isPartOrString)) {
-        convertedContents.push({ role: 'user', parts: contentListUnions });
-      } else {
+      if (convertedSystemContent.length != 1) {
         throw new Error(
-          `Invalid contents given. Gemini Does not support mixing parts and contents: ${JSON.stringify(
-            contentListUnions
+          `Invalid system instruction given. Gemini Does not support multiple system instructions: ${JSON.stringify(
+            request.contents
           )}`
         );
       }
-      for (const content of convertedContents) {
-        const message = convertContentToLLMMessage(content);
-        if (message) {
-          messages.push(message);
-        }
+
+      contents.push(convertedSystemContent[0]);
+    }
+
+    // Handle request contents
+    if (request?.contents) {
+      const convertedContents = convertContentListUnionsToContentList(
+        request.contents,
+        'user'
+      );
+
+      contents.push(...convertedContents);
+    }
+
+    for (const content of contents) {
+      const message = convertContentToLLMMessage(content);
+      if (message) {
+        messages.push(message);
       }
     }
+
     return {
       messages,
       available_tools,
@@ -273,4 +275,51 @@ function isContent(obj: unknown): boolean {
     return 'parts' in obj || 'role' in obj;
   }
   return false;
+}
+
+function convertContentListUnionsToContentList(
+  input: Array<ContentListUnion> | ContentListUnion,
+  defaultRole: string
+): Array<Content> {
+  /*
+      Gemini request.contents is an object called contentListUnions which can be
+      list of parts or content objects:
+      https://github.com/googleapis/js-genai/blob/b5d77e1bfea5c6b4903bc7ade986e91d6e146835/src/types.ts#L1937
+    */
+
+  let inputs: Array<ContentListUnion>;
+  if (!Array.isArray(input)) {
+    inputs = [input];
+  } else {
+    inputs = input;
+  }
+
+  if (inputs.length === 0) {
+    return [];
+  }
+
+  let convertedContents: Array<Content> = [];
+  if (inputs.every(isContent)) {
+    convertedContents = inputs as Array<Content>;
+  } else if (inputs.every(isPartOrString)) {
+    let partInputs: Array<Part> = [];
+    for (const partOrString of inputs) {
+      if (typeof partOrString === 'string') {
+        partInputs.push({ text: partOrString });
+      } else {
+        partInputs.push(partOrString as Part);
+      }
+    }
+    convertedContents.push({
+      role: defaultRole,
+      parts: partInputs,
+    });
+  } else {
+    throw new Error(
+      `Invalid contents given. Gemini Does not support mixing parts and contents: ${JSON.stringify(
+        inputs
+      )}`
+    );
+  }
+  return convertedContents;
 }
