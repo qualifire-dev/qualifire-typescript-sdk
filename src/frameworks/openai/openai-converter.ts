@@ -131,7 +131,7 @@ export class OpenAICanonicalEvaluationStrategy
 
     if (request?.messages) {
       messages.push(
-        ...this.convertRequestMessagesForChatCompletions(request.messages as ChatCompletionMessageParam[])
+        ...this.convertRequestMessagesForChatCompletions(request.messages )
       );
     }
 
@@ -158,25 +158,25 @@ export class OpenAICanonicalEvaluationStrategy
         case 'system':
         case 'developer':
         case 'user':
-          let textMessage = message as ChatCompletionDeveloperMessageParam // This works the same for System user and developer. Used this type just out of comfort
+          const textMessage = message as ChatCompletionDeveloperMessageParam // This works the same for System user and developer. Used this type just out of comfort
           if (typeof textMessage.content === 'string') {
-            content = textMessage.content as string;
+            content = textMessage.content ;
           } else {
-            content = (textMessage.content as ChatCompletionContentPartText[]).filter((part) => part.type === 'text').map((part) => part.text).join('')
+            content = (textMessage.content ).filter((part) => part.type === 'text').map((part) => part.text).join('')
           }
           break;
         case 'assistant':
-          let assistantMessage = message as ChatCompletionAssistantMessageParam
+          const assistantMessage = message 
           if (assistantMessage.content) {
             if (typeof assistantMessage.content === 'string') {
               content = assistantMessage.content;
             } else {
-              content = (assistantMessage.content as Array<ChatCompletionContentPartText | ChatCompletionContentPartRefusal>).filter((part) => part.type === 'text').map((part) => (part as ChatCompletionContentPartText).text).join('')
+              content = (assistantMessage.content ).filter((part) => part.type === 'text').map((part) => (part as ChatCompletionContentPartText).text).join('')
             }
           }
           if (assistantMessage.tool_calls) {
             toolCalls = assistantMessage.tool_calls
-            .filter((toolCalls) => toolCalls.type === "function")
+            .filter((toolCalls) => toolCalls.type === 'function')
             .map((toolCalls) => {
                   // It's of type ChatCompletionMessageFunctionToolCall but it's not exported
                   let toolArguments = {}
@@ -195,12 +195,12 @@ export class OpenAICanonicalEvaluationStrategy
           }
           break;
         case 'tool':
-          let toolMessage = message as ChatCompletionToolMessageParam
+          const toolMessage = message 
           if (toolMessage.content) {
             if (typeof toolMessage.content === 'string') {
               content = toolMessage.content;
             } else {
-              content = (toolMessage.content as Array<ChatCompletionContentPartText>).filter((part) => part.type === 'text').map((part) => part.text).join('')
+              content = (toolMessage.content ).filter((part) => part.type === 'text').map((part) => part.text).join('')
             }
           }
           break;
@@ -520,7 +520,7 @@ export class OpenAICanonicalEvaluationStrategy
   private async handleChatCompletionsNonStreaming(
     response: ChatCompletion
   ): Promise<LLMMessage[]> {
-    response = response as ChatCompletion;
+    response = response ;
 
     const messages: LLMMessage[] = [];
 
@@ -565,7 +565,7 @@ export class OpenAICanonicalEvaluationStrategy
 
     if (response.output) {
       messages.push(
-        ...convertResponsesAPIMessagesToLLMMessages(response.output as Array<ResponseOutputItem>)
+        ...convertResponsesAPIMessagesToLLMMessages(response.output )
       );
     } else {
       console.debug(
@@ -619,8 +619,8 @@ function convertResponsesAPIMessagesToLLMMessages(
       continue
     }
 
-    let aggregatedContent: string[] = [];
-    let aggregatedToolCalls: LLMToolCall[] = [];
+    const aggregatedContent: string[] = [];
+    const aggregatedToolCalls: LLMToolCall[] = [];
     let role = message.role;
 
     for (const contentElement of message.content) {

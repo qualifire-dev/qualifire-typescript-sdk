@@ -4,6 +4,14 @@ import { z } from 'zod';
 const FrameworkEnum = ['openai', 'vercelai', 'gemini', 'claude'] as const;
 export type Framework = typeof FrameworkEnum[number];
 
+// Model mode enum
+const ModelModeEnum = ['speed', 'balanced', 'quality'] as const;
+export type ModelMode = typeof ModelModeEnum[number];
+
+// Policy target enum
+const PolicyTargetEnum = ['input', 'output', 'both'] as const;
+export type PolicyTarget = typeof PolicyTargetEnum[number];
+
 export const messageSchema = z.object({
   role: z.string(),
   content: z.string().nullable(),
@@ -73,15 +81,20 @@ export const EvaluationRequestV2Schema = z.object({
   output: z.string().optional(),
   /** @deprecated Use request/response instead */
   messages: z.array(LLMMessageSchema).optional(),
+  /** @deprecated Use contentModerationCheck instead */
   dangerousContentCheck: z.boolean().default(false).optional(),
   groundingCheck: z.boolean().default(false).optional(),
   hallucinationsCheck: z.boolean().default(false).optional(),
+  /** @deprecated Use contentModerationCheck instead */
   harassmentCheck: z.boolean().default(false).optional(),
+  /** @deprecated Use contentModerationCheck instead */
   hateSpeechCheck: z.boolean().default(false).optional(),
   instructionsFollowingCheck: z.boolean().default(false).optional(),
   piiCheck: z.boolean().default(false).optional(),
   promptInjections: z.boolean().default(false).optional(),
+  /** @deprecated Use contentModerationCheck instead */
   sexualContentCheck: z.boolean().default(false).optional(),
+  contentModerationCheck: z.boolean().default(false).optional(),
   syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
   toolSelectionQualityCheck: z.boolean().default(false).optional(),
   assertions: z.array(z.string()).optional(),
@@ -109,6 +122,14 @@ export const EvaluationRequestV2Schema = z.object({
   syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
   /** @deprecated Use toolSelectionQualityCheck instead */
   tool_selection_quality_check: z.boolean().default(false).optional(),
+  tsqMode: z.enum(ModelModeEnum).default('balanced').optional(),
+  consistencyMode: z.enum(ModelModeEnum).default('balanced').optional(),
+  assertionsMode: z.enum(ModelModeEnum).default('balanced').optional(),
+  groundingMode: z.enum(ModelModeEnum).default('balanced').optional(),
+  hallucinationsMode: z.enum(ModelModeEnum).default('balanced').optional(),
+  groundingMultiTurnMode: z.boolean().default(false).optional(),
+  policyMultiTurnMode: z.boolean().default(false).optional(),
+  policyTarget: z.enum(PolicyTargetEnum).optional(),
 });
 
 export const EvaluationProxyAPIRequestSchema = z
@@ -121,15 +142,15 @@ export const EvaluationProxyAPIRequestSchema = z
     messages: z.array(LLMMessageSchema).optional(),
     /** @deprecated Use request/response instead */
     available_tools: z.array(LLMToolDefinitionSchema).optional(),
-    /** @deprecated Use dangerousContentCheck instead */
+    /** @deprecated Use contentModerationCheck instead */
     dangerous_content_check: z.boolean().default(false),
     /** @deprecated Use groundingCheck instead */
     grounding_check: z.boolean().default(false),
     /** @deprecated Use hallucinationsCheck instead */
     hallucinations_check: z.boolean().default(false),
-    /** @deprecated Use harassmentCheck instead */
+    /** @deprecated Use contentModerationCheck instead */
     harassment_check: z.boolean().default(false),
-    /** @deprecated Use hateSpeechCheck instead */
+    /** @deprecated Use contentModerationCheck instead */
     hate_speech_check: z.boolean().default(false),
     /** @deprecated Use instructionsFollowingCheck instead */
     instructions_following_check: z.boolean().default(false),
@@ -137,24 +158,37 @@ export const EvaluationProxyAPIRequestSchema = z
     pii_check: z.boolean().default(false),
     /** @deprecated Use promptInjections instead */
     prompt_injections: z.boolean().default(false),
-    /** @deprecated Use sexualContentCheck instead */
+    /** @deprecated Use contentModerationCheck instead */
     sexual_content_check: z.boolean().default(false),
     /** @deprecated Use syntaxChecks instead */
     syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
     /** @deprecated Use toolSelectionQualityCheck instead */
     tool_selection_quality_check: z.boolean().default(false),
     assertions: z.array(z.string()).optional(),
+    /** @deprecated Use contentModerationCheck instead */
     dangerousContentCheck: z.boolean().default(false).optional(),
     groundingCheck: z.boolean().default(false).optional(),
     hallucinationsCheck: z.boolean().default(false).optional(),
+    /** @deprecated Use contentModerationCheck instead */
     harassmentCheck: z.boolean().default(false).optional(),
+    /** @deprecated Use contentModerationCheck instead */
     hateSpeechCheck: z.boolean().default(false).optional(),
     instructionsFollowingCheck: z.boolean().default(false).optional(),
     piiCheck: z.boolean().default(false).optional(),
     promptInjections: z.boolean().default(false).optional(),
+    /** @deprecated Use contentModerationCheck instead */
     sexualContentCheck: z.boolean().default(false).optional(),
+    contentModerationCheck: z.boolean().default(false).optional(),
     syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
     toolSelectionQualityCheck: z.boolean().default(false).optional(),
+    tsqMode: z.enum(ModelModeEnum).default('balanced').optional(),
+    consistencyMode: z.enum(ModelModeEnum).default('balanced').optional(),
+    assertionsMode: z.enum(ModelModeEnum).default('balanced').optional(),
+    groundingMode: z.enum(ModelModeEnum).default('balanced').optional(),
+    hallucinationsMode: z.enum(ModelModeEnum).default('balanced').optional(),
+    groundingMultiTurnMode: z.boolean().default(false).optional(),
+    policyMultiTurnMode: z.boolean().default(false).optional(),
+    policyTarget: z.enum(PolicyTargetEnum).optional(),
   })
   .superRefine((data, ctx) => {
     const hasMessages =
