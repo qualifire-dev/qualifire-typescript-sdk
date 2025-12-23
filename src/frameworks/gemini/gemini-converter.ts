@@ -72,7 +72,7 @@ export class GeminiAICanonicalEvaluationStrategy
       }
     }
 
-    let contents: Array<Content> = [];
+    const contents: Array<Content> = [];
     if (request?.config?.systemInstruction) {
       /*
         Gemini request.contents is an object called contentListUnions which can be
@@ -154,9 +154,9 @@ export class GeminiAICanonicalEvaluationStrategy
   ): Promise<LLMMessage[]> {
     const messages: LLMMessage[] = [];
 
-    let accumulatedContentParts: string[] = [];
+    const accumulatedContentParts: string[] = [];
     let currentRole = 'assistant';
-    let toolCalls: LLMToolCall[] = [];
+    const toolCalls: LLMToolCall[] = [];
     for (const chunk of response) {
       if (chunk?.candidates && chunk.candidates.length > 0) {
         if (chunk.candidates.length > 1) {
@@ -216,8 +216,8 @@ function convertContentToLLMMessage(content: any): LLMMessage | null {
 
   // In Gemini role is optional, but by default the api is changing it to 'user' when no role is provided
   let role = content.role || 'user';
-  let textContent: string[] = [];
-  let tool_calls: LLMToolCall[] = [];
+  const textContent: string[] = [];
+  const tool_calls: LLMToolCall[] = [];
 
   // Process all parts and aggregate them
   for (const part of content.parts) {
@@ -304,7 +304,7 @@ function convertContentListUnionsToContentList(
   if (inputs.every(isContent)) {
     convertedContents = inputs as Array<Content>;
   } else if (inputs.every(isPartOrString)) {
-    let partInputs: Array<Part> = [];
+    const partInputs: Array<Part> = [];
     for (const partOrString of inputs) {
       if (typeof partOrString === 'string') {
         partInputs.push({ text: partOrString });

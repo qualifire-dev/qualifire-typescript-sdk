@@ -119,7 +119,7 @@ export class ClaudeCanonicalEvaluationStrategy
     for (const responseEvent of response) {
       switch (responseEvent.type) {
         case 'message_start':
-          const rawMessageStartEvent = responseEvent as RawMessageStartEvent;
+          const rawMessageStartEvent = responseEvent ;
           role = rawMessageStartEvent.message.role;
           accumulatedContent = [];
           accumulatedToolName = undefined;
@@ -127,20 +127,20 @@ export class ClaudeCanonicalEvaluationStrategy
           accumulatedToolInput = [];
           break;
         case 'content_block_start':
-          const rawContentBlockStartEvent = responseEvent as RawContentBlockStartEvent;
+          const rawContentBlockStartEvent = responseEvent ;
           switch (rawContentBlockStartEvent.content_block.type) {
             case 'text':
-              const textBlock = rawContentBlockStartEvent.content_block as TextBlock;  
+              const textBlock = rawContentBlockStartEvent.content_block ;  
               accumulatedContent.push(textBlock.text)
               break;
             case 'tool_use':
-              const toolUseBlock = rawContentBlockStartEvent.content_block as ToolUseBlock;
+              const toolUseBlock = rawContentBlockStartEvent.content_block ;
               accumulatedToolId = toolUseBlock.id
               accumulatedToolName = toolUseBlock.name
               accumulatedToolInput = []
               break;
             case 'thinking':
-              const thinkingBlock = rawContentBlockStartEvent.content_block as ThinkingBlock;
+              const thinkingBlock = rawContentBlockStartEvent.content_block ;
               accumulatedContent.push(thinkingBlock.thinking)
               break;
             default:
@@ -148,14 +148,14 @@ export class ClaudeCanonicalEvaluationStrategy
           }
           break;
         case 'content_block_delta':
-          const rawContentBlockDeltaEvent = responseEvent as RawContentBlockDeltaEvent;
+          const rawContentBlockDeltaEvent = responseEvent ;
           switch (rawContentBlockDeltaEvent.delta.type) {
               case 'text_delta':
-                const textDelta = rawContentBlockDeltaEvent.delta as TextDelta;
+                const textDelta = rawContentBlockDeltaEvent.delta ;
                 accumulatedContent.push(textDelta.text)
                 break;
               case 'input_json_delta':
-                const inputJsonDelta = rawContentBlockDeltaEvent.delta as InputJSONDelta;
+                const inputJsonDelta = rawContentBlockDeltaEvent.delta ;
                 accumulatedToolInput.push(inputJsonDelta.partial_json)
                 break;
               default:
@@ -176,7 +176,7 @@ export class ClaudeCanonicalEvaluationStrategy
             };
           };
           if (!role) {
-            console.debug(`role was not set`);
+            console.debug('role was not set');
             continue;
           }
           messages.push({
@@ -246,7 +246,7 @@ export class ClaudeCanonicalEvaluationStrategy
             break;
           case 'tool_result':
             role = 'tool'; // Claude expects 'user' role for tool results. But Qualifire treats tool as results as it is sent from 'tool'
-            const toolResultBlock = part as ToolResultBlockParam;
+            const toolResultBlock = part ;
             if (typeof toolResultBlock.content === 'string') {
               aggregatedContent.push(toolResultBlock.content)
             } else {
@@ -272,7 +272,7 @@ export class ClaudeCanonicalEvaluationStrategy
 
       // If we accumulated aggregatedContent or aggregatedToolCalls, add the message
       if (aggregatedContent.length > 0 || aggregatedToolCalls.length > 0) {
-        let accumulatedMessage: LLMMessage = {
+        const accumulatedMessage: LLMMessage = {
           role,
         };
 

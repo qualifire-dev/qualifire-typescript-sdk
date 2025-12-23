@@ -210,14 +210,14 @@ export class VercelAICanonicalEvaluationStrategy
     for (const message of messages) {
       switch (message.role) {
         case 'system':
-          const systemMessage = message as SystemModelMessage;
+          const systemMessage = message ;
           extractedMessages.push({
             role: 'system',
             content: systemMessage.content,
           });
           break;
         case 'user':
-          const userMessage = message as UserModelMessage;
+          const userMessage = message ;
           if (typeof userMessage.content === 'string') {
             extractedMessages.push({
               role: 'user',
@@ -237,7 +237,7 @@ export class VercelAICanonicalEvaluationStrategy
           }
           break;
         case 'assistant':
-          const assistantMessage = message as AssistantModelMessage;
+          const assistantMessage = message ;
           if (typeof assistantMessage.content === 'string') {
             extractedMessages.push({
               role: 'assistant',
@@ -264,7 +264,7 @@ export class VercelAICanonicalEvaluationStrategy
           }
           break;
         case 'tool':
-          const toolMessage = message as ToolModelMessage;
+          const toolMessage = message ;
           const toolContent = extractToolContent(toolMessage);
           extractedMessages.push({
             role: 'tool',
@@ -292,7 +292,7 @@ function extractToolContent(toolMessage: ToolModelMessage): string {
   }
   const firstContent = content[0];
   if (firstContent.type !== 'tool-result') {
-    console.debug(`Expected tool-result in the first content of a tool message. Seems like invalid tool was given.`);
+    console.debug('Expected tool-result in the first content of a tool message. Seems like invalid tool was given.');
     return '';
   }
   // LanguageModelV2ToolResultOutput is not exported unfortunaly so we have to use this type
@@ -316,12 +316,12 @@ function extractToolContent(toolMessage: ToolModelMessage): string {
 }
 
 function extractToolCalls(content: ToolCallPart[]): LLMToolCall[] {
-  let toolCalls: LLMToolCall[] = [];
+  const toolCalls: LLMToolCall[] = [];
   for (const part of content) {
     if (part.type !== 'tool-call') {
       continue;
     }
-    let toolCall: unknown = {
+    const toolCall: unknown = {
       name: part.toolName,
       arguments: part.input,
       id: part.toolCallId,
