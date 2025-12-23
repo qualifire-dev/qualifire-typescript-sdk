@@ -1,15 +1,13 @@
 import * as traceloop from '@traceloop/node-server-sdk';
+import { CanonicalEvaluationStrategy } from './frameworks/canonical';
 import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-converter';
 import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
 import { EvaluationProxyAPIRequest, EvaluationProxyAPIRequestSchema, EvaluationRequestV2Schema, type EvaluationRequestV2, type EvaluationResponse, type Framework } from './types';
-import { CanonicalEvaluationStrategy } from './frameworks/canonical';
 
 export type {
-  EvaluationRequestV2,
-  EvaluationProxyAPIRequest,
-  EvaluationResponse, Framework, LLMMessage
+  EvaluationProxyAPIRequest, EvaluationRequestV2, EvaluationResponse, Framework, LLMMessage, ModelMode, PolicyTarget
 } from './types';
 
 
@@ -102,15 +100,12 @@ export class Qualifire {
    *  framework: 'openai',
    *  request: openaiRequest, // As given to openaiClient.chat.completions.create(), openaiClient.responses.create()
    *  response: openaiResponse, // Response as returned by openaiClient.chat.completions.create() or openaiClient.responses.create()
-   *  dangerousContentCheck: true,
+   *  contentModerationCheck: true,
    *  groundingCheck: true,
    *  hallucinationsCheck: true,
-   *  harassmentCheck: true,
-   *  hateSpeechCheck: true,
    *  instructionsFollowingCheck: true,
    *  piiCheck: true,
    *  promptInjections: true,
-   *  sexualContentCheck: true,
    *  toolSelectionQualityCheck: false,
    * });
    * 
@@ -158,7 +153,7 @@ export class Qualifire {
    *     { role: 'user', content: 'What is the capital of France?' },
    *     { role: 'assistant', content: 'Paris' }
    *   ],
-   *   dangerousContentCheck: true,
+   *   contentModerationCheck: true,
    *   hallucinationsCheck: true,
    * });
    * ```
@@ -202,21 +197,29 @@ export class Qualifire {
    * Evaluates using direct messages without conversion (overrides request/response if both are provided)
    */
   private evaluateWithBackwardCompatibility = async (evaluationProxyAPIRequest: EvaluationProxyAPIRequest): Promise<EvaluationResponse | undefined> => {
+    // Compute contentModerationCheck from deprecated fields or use the new field
+    const contentModerationCheck = evaluationProxyAPIRequest.contentModerationCheck || 
+      evaluationProxyAPIRequest.dangerous_content_check || 
+      evaluationProxyAPIRequest.dangerousContentCheck || 
+      evaluationProxyAPIRequest.harassment_check || 
+      evaluationProxyAPIRequest.harassmentCheck || 
+      evaluationProxyAPIRequest.hate_speech_check || 
+      evaluationProxyAPIRequest.hateSpeechCheck || 
+      evaluationProxyAPIRequest.sexual_content_check || 
+      evaluationProxyAPIRequest.sexualContentCheck;
+
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {
       input: evaluationProxyAPIRequest.input,
       output: evaluationProxyAPIRequest.output,
       messages: evaluationProxyAPIRequest.messages,
       available_tools: evaluationProxyAPIRequest.available_tools,
-      dangerous_content_check: evaluationProxyAPIRequest.dangerous_content_check || evaluationProxyAPIRequest.dangerousContentCheck,
+      content_moderation_check: contentModerationCheck,
       grounding_check: evaluationProxyAPIRequest.grounding_check || evaluationProxyAPIRequest.groundingCheck,
       hallucinations_check: evaluationProxyAPIRequest.hallucinations_check || evaluationProxyAPIRequest.hallucinationsCheck,
-      harassment_check: evaluationProxyAPIRequest.harassment_check || evaluationProxyAPIRequest.harassmentCheck,
-      hate_speech_check: evaluationProxyAPIRequest.hate_speech_check || evaluationProxyAPIRequest.hateSpeechCheck,
       instructions_following_check: evaluationProxyAPIRequest.instructions_following_check || evaluationProxyAPIRequest.instructionsFollowingCheck,
       pii_check: evaluationProxyAPIRequest.pii_check || evaluationProxyAPIRequest.piiCheck,
       prompt_injections: evaluationProxyAPIRequest.prompt_injections || evaluationProxyAPIRequest.promptInjections,
-      sexual_content_check: evaluationProxyAPIRequest.sexual_content_check || evaluationProxyAPIRequest.sexualContentCheck,
       syntax_checks: evaluationProxyAPIRequest.syntax_checks || evaluationProxyAPIRequest.syntaxChecks,
       tool_selection_quality_check: evaluationProxyAPIRequest.tool_selection_quality_check || evaluationProxyAPIRequest.toolSelectionQualityCheck,
       assertions: evaluationProxyAPIRequest.assertions,
@@ -245,6 +248,13 @@ export class Qualifire {
    * Evaluates using framework converters for request/response
    */
   private evaluateWithConverters = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
+    // Compute contentModerationCheck from deprecated fields or use the new field
+    const contentModerationCheck = EvaluationRequestV2.contentModerationCheck || 
+      EvaluationRequestV2.dangerousContentCheck || 
+      EvaluationRequestV2.harassmentCheck || 
+      EvaluationRequestV2.hateSpeechCheck || 
+      EvaluationRequestV2.sexualContentCheck;
+
     const frameworkConverters: Record<Framework, () => CanonicalEvaluationStrategy<any, any>> = {
       'openai': () => new OpenAICanonicalEvaluationStrategy(),
       'vercelai': () => new VercelAICanonicalEvaluationStrategy(),
@@ -268,15 +278,12 @@ export class Qualifire {
     const body = {
       messages: evaluationRequest.messages,
       available_tools: evaluationRequest.available_tools,
-      dangerous_content_check: EvaluationRequestV2.dangerousContentCheck,
+      content_moderation_check: contentModerationCheck,
       grounding_check: EvaluationRequestV2.groundingCheck,
       hallucinations_check: EvaluationRequestV2.hallucinationsCheck,
-      harassment_check: EvaluationRequestV2.harassmentCheck,
-      hate_speech_check: EvaluationRequestV2.hateSpeechCheck,
       instructions_following_check: EvaluationRequestV2.instructionsFollowingCheck,
       pii_check: EvaluationRequestV2.piiCheck,
       prompt_injections: EvaluationRequestV2.promptInjections,
-      sexual_content_check: EvaluationRequestV2.sexualContentCheck,
       syntax_checks: EvaluationRequestV2.syntaxChecks,
       tool_selection_quality_check: EvaluationRequestV2.toolSelectionQualityCheck,
       assertions: EvaluationRequestV2.assertions,
