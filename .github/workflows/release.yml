@@ -1,36 +1,24 @@
-name: Release
+name: Publish Package
+
 on:
   push:
     branches:
       - main
+permissions:
+  id-token: write # Required for OIDC
+  contents: read
+
 jobs:
-  release:
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    name: Release
+  publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          fetch-depth: 0
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "lts/*"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
-      - uses: pnpm/action-setup@v2
-        with:
-          version: 8
-      - name: Install dependencies
-        run: pnpm i
-      - name: Build
-        run: pnpm run build
-      - name: Test
-        run: pnpm test
-      - name: Release
-        run: npm publish
-      - name: Upload Code Coverage
-        uses: codecov/codecov-action@v3.1.0
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npm test
+      - run: npm publish
