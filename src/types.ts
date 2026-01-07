@@ -168,8 +168,6 @@ export const EvaluationProxyAPIRequestSchema = z
     syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
     /** @deprecated Use toolSelectionQualityCheck instead */
     tool_selection_quality_check: z.boolean().default(false),
-    /** @deprecated Use toolUseQualityCheck instead */
-    tool_use_quality_check: z.boolean().default(false).optional(),
     assertions: z.array(z.string()).optional(),
     /** @deprecated Use contentModerationCheck instead */
     dangerousContentCheck: z.boolean().default(false).optional(),
