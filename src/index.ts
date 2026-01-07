@@ -256,12 +256,13 @@ export class Qualifire {
       syntax_checks:
         evaluationProxyAPIRequest.syntax_checks ||
         evaluationProxyAPIRequest.syntaxChecks,
-      tool_selection_quality_check:
+      tool_use_quality_check:
+        evaluationProxyAPIRequest.tool_use_quality_check ||
         evaluationProxyAPIRequest.tool_selection_quality_check ||
-        evaluationProxyAPIRequest.toolSelectionQualityCheck,
-      tool_use_quality_check: evaluationProxyAPIRequest.toolUseQualityCheck,
-      tsq_mode: evaluationProxyAPIRequest.tsqMode,
-      tuq_mode: evaluationProxyAPIRequest.tuqMode,
+        evaluationProxyAPIRequest.toolSelectionQualityCheck ||
+        evaluationProxyAPIRequest.toolUseQualityCheck,
+      tuq_mode:
+        evaluationProxyAPIRequest.tuqMode ?? evaluationProxyAPIRequest.tsqMode,
       assertions: evaluationProxyAPIRequest.assertions,
     };
 
@@ -339,11 +340,11 @@ export class Qualifire {
       pii_check: EvaluationRequestV2.piiCheck,
       prompt_injections: EvaluationRequestV2.promptInjections,
       syntax_checks: EvaluationRequestV2.syntaxChecks,
-      tool_selection_quality_check:
-        EvaluationRequestV2.toolSelectionQualityCheck,
-      tool_use_quality_check: EvaluationRequestV2.toolUseQualityCheck,
-      tsq_mode: EvaluationRequestV2.tsqMode,
-      tuq_mode: EvaluationRequestV2.tuqMode,
+      tool_use_quality_check:
+        EvaluationRequestV2.tool_selection_quality_check ||
+        EvaluationRequestV2.toolSelectionQualityCheck ||
+        EvaluationRequestV2.toolUseQualityCheck,
+      tuq_mode: EvaluationRequestV2.tuqMode ?? EvaluationRequestV2.tsqMode,
       assertions: EvaluationRequestV2.assertions,
     };
 
