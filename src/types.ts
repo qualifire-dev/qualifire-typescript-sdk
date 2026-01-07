@@ -124,8 +124,6 @@ export const EvaluationRequestV2Schema = z.object({
   syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
   /** @deprecated Use toolUseQualityCheck instead */
   tool_selection_quality_check: z.boolean().default(false).optional(),
-  /** @deprecated Use toolUseQualityCheck instead */
-  tool_use_quality_check: z.boolean().default(false).optional(),
   /** @deprecated Use tuqMode instead */
   tsqMode: z.enum(ModelModeEnum).optional(),
   tuqMode: z.enum(ModelModeEnum).optional(),
