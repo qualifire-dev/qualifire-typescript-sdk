@@ -4,12 +4,24 @@ import { ClaudeCanonicalEvaluationStrategy } from './frameworks/claude/claude-co
 import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-converter';
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
-import { EvaluationProxyAPIRequest, EvaluationProxyAPIRequestSchema, EvaluationRequestV2Schema, type EvaluationRequestV2, type EvaluationResponse, type Framework } from './types';
-
-export type {
-  EvaluationProxyAPIRequest, EvaluationRequestV2, EvaluationResponse, Framework, LLMMessage, ModelMode, PolicyTarget
+import {
+  EvaluationProxyAPIRequest,
+  EvaluationProxyAPIRequestSchema,
+  EvaluationRequestV2Schema,
+  type EvaluationRequestV2,
+  type EvaluationResponse,
+  type Framework,
 } from './types';
 
+export type {
+  EvaluationProxyAPIRequest,
+  EvaluationRequestV2,
+  EvaluationResponse,
+  Framework,
+  LLMMessage,
+  ModelMode,
+  PolicyTarget,
+} from './types';
 
 /**
  * Represents the Qualifire SDK.
@@ -61,7 +73,7 @@ export class Qualifire {
    * This function supports two modes:
    * 1. Request-Response mode: If `request`, `response` and `framework` are provided, they fully analyzed by the Qualifire API
    * 2. Fine-grained messages mode: If `messages`, `input` or `output` are provided, they are sent specifically to the Qualifire API
-   * 
+   *
    * Supported frameworks are: openai, vercelai, gemini, claude
    * Note: Direct messages are deprecated, but still supported for backward compatibility.
    *
@@ -91,11 +103,11 @@ export class Qualifire {
    *    },
    *  ],
    * };
-   * 
+   *
    * const openAiResponse = await openaiClient.chat.completions.create(
    *   openAiRequest
    * );
-   * 
+   *
    * const qualifireResponse = await qualifireClient.evaluate({
    *  framework: 'openai',
    *  request: openaiRequest, // As given to openaiClient.chat.completions.create(), openaiClient.responses.create()
@@ -106,9 +118,9 @@ export class Qualifire {
    *  instructionsFollowingCheck: true,
    *  piiCheck: true,
    *  promptInjections: true,
-   *  toolSelectionQualityCheck: false,
+   *  toolUseQualityCheck: false, // Use this instead of deprecated toolSelectionQualityCheck
    * });
-   * 
+   *
    * // If you are using streaming mode.
    * const openAiRequestStream = {
    *  stream: true,
@@ -129,11 +141,11 @@ export class Qualifire {
    *    },
    *  ],
    * };
-   * 
+   *
    * const openAiResponseStream = await openaiClient.chat.completions.create(
    *   openAiRequestStream
    * );
-   * 
+   *
    * let ResponseChunks: any[] = [];
    * for await (const chunk of openAiResponseStream) {
    *   ResponseChunks.push(chunk);
@@ -146,7 +158,7 @@ export class Qualifire {
    *   groundingCheck: true,
    *   promptInjections: true,
    * });
-   * 
+   *
    * // Fine-grained messages mode
    * const response2 = await qualifire.evaluate({
    *   messages: [
@@ -157,7 +169,7 @@ export class Qualifire {
    *   hallucinationsCheck: true,
    * });
    * ```
-   * 
+   *
    * // A typical output for qualifire response would be:
    * Qualifire response: {
    *  "status": "failed",
@@ -178,34 +190,45 @@ export class Qualifire {
    *  ]
    * }
    */
-  evaluate = async (evaluationRequest: EvaluationProxyAPIRequest | EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
+  evaluate = async (
+    evaluationRequest: EvaluationProxyAPIRequest | EvaluationRequestV2
+  ): Promise<EvaluationResponse | undefined> => {
     // If messages are provided directly, use them as-is without conversion
-    const parseEvaluationProxyAPIRequest = EvaluationProxyAPIRequestSchema.safeParse(evaluationRequest)
+    const parseEvaluationProxyAPIRequest =
+      EvaluationProxyAPIRequestSchema.safeParse(evaluationRequest);
     if (parseEvaluationProxyAPIRequest.success) {
-      return this.evaluateWithBackwardCompatibility(parseEvaluationProxyAPIRequest.data as EvaluationProxyAPIRequest);
+      return this.evaluateWithBackwardCompatibility(
+        parseEvaluationProxyAPIRequest.data as EvaluationProxyAPIRequest
+      );
     }
 
-    const parseEvaluationRequestResultV2 = EvaluationRequestV2Schema.safeParse(evaluationRequest)
+    const parseEvaluationRequestResultV2 =
+      EvaluationRequestV2Schema.safeParse(evaluationRequest);
     if (parseEvaluationRequestResultV2.success) {
-      return this.evaluateWithConverters(parseEvaluationRequestResultV2.data );
+      return this.evaluateWithConverters(parseEvaluationRequestResultV2.data);
     }
-    
-    throw new Error(`Invalid evaluation request format: ${JSON.stringify(evaluationRequest)}`);
+
+    throw new Error(
+      `Invalid evaluation request format: ${JSON.stringify(evaluationRequest)}`
+    );
   };
 
   /**
    * Evaluates using direct messages without conversion (overrides request/response if both are provided)
    */
-  private evaluateWithBackwardCompatibility = async (evaluationProxyAPIRequest: EvaluationProxyAPIRequest): Promise<EvaluationResponse | undefined> => {
+  private evaluateWithBackwardCompatibility = async (
+    evaluationProxyAPIRequest: EvaluationProxyAPIRequest
+  ): Promise<EvaluationResponse | undefined> => {
     // Compute contentModerationCheck from deprecated fields or use the new field
-    const contentModerationCheck = evaluationProxyAPIRequest.contentModerationCheck || 
-      evaluationProxyAPIRequest.dangerous_content_check || 
-      evaluationProxyAPIRequest.dangerousContentCheck || 
-      evaluationProxyAPIRequest.harassment_check || 
-      evaluationProxyAPIRequest.harassmentCheck || 
-      evaluationProxyAPIRequest.hate_speech_check || 
-      evaluationProxyAPIRequest.hateSpeechCheck || 
-      evaluationProxyAPIRequest.sexual_content_check || 
+    const contentModerationCheck =
+      evaluationProxyAPIRequest.contentModerationCheck ||
+      evaluationProxyAPIRequest.dangerous_content_check ||
+      evaluationProxyAPIRequest.dangerousContentCheck ||
+      evaluationProxyAPIRequest.harassment_check ||
+      evaluationProxyAPIRequest.harassmentCheck ||
+      evaluationProxyAPIRequest.hate_speech_check ||
+      evaluationProxyAPIRequest.hateSpeechCheck ||
+      evaluationProxyAPIRequest.sexual_content_check ||
       evaluationProxyAPIRequest.sexualContentCheck;
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
@@ -215,13 +238,30 @@ export class Qualifire {
       messages: evaluationProxyAPIRequest.messages,
       available_tools: evaluationProxyAPIRequest.available_tools,
       content_moderation_check: contentModerationCheck,
-      grounding_check: evaluationProxyAPIRequest.grounding_check || evaluationProxyAPIRequest.groundingCheck,
-      hallucinations_check: evaluationProxyAPIRequest.hallucinations_check || evaluationProxyAPIRequest.hallucinationsCheck,
-      instructions_following_check: evaluationProxyAPIRequest.instructions_following_check || evaluationProxyAPIRequest.instructionsFollowingCheck,
-      pii_check: evaluationProxyAPIRequest.pii_check || evaluationProxyAPIRequest.piiCheck,
-      prompt_injections: evaluationProxyAPIRequest.prompt_injections || evaluationProxyAPIRequest.promptInjections,
-      syntax_checks: evaluationProxyAPIRequest.syntax_checks || evaluationProxyAPIRequest.syntaxChecks,
-      tool_selection_quality_check: evaluationProxyAPIRequest.tool_selection_quality_check || evaluationProxyAPIRequest.toolSelectionQualityCheck,
+      grounding_check:
+        evaluationProxyAPIRequest.grounding_check ||
+        evaluationProxyAPIRequest.groundingCheck,
+      hallucinations_check:
+        evaluationProxyAPIRequest.hallucinations_check ||
+        evaluationProxyAPIRequest.hallucinationsCheck,
+      instructions_following_check:
+        evaluationProxyAPIRequest.instructions_following_check ||
+        evaluationProxyAPIRequest.instructionsFollowingCheck,
+      pii_check:
+        evaluationProxyAPIRequest.pii_check ||
+        evaluationProxyAPIRequest.piiCheck,
+      prompt_injections:
+        evaluationProxyAPIRequest.prompt_injections ||
+        evaluationProxyAPIRequest.promptInjections,
+      syntax_checks:
+        evaluationProxyAPIRequest.syntax_checks ||
+        evaluationProxyAPIRequest.syntaxChecks,
+      tool_selection_quality_check:
+        evaluationProxyAPIRequest.tool_selection_quality_check ||
+        evaluationProxyAPIRequest.toolSelectionQualityCheck,
+      tool_use_quality_check: evaluationProxyAPIRequest.toolUseQualityCheck,
+      tsq_mode: evaluationProxyAPIRequest.tsqMode,
+      tuq_mode: evaluationProxyAPIRequest.tuqMode,
       assertions: evaluationProxyAPIRequest.assertions,
     };
 
@@ -247,32 +287,45 @@ export class Qualifire {
   /**
    * Evaluates using framework converters for request/response
    */
-  private evaluateWithConverters = async (EvaluationRequestV2: EvaluationRequestV2): Promise<EvaluationResponse | undefined> => {
+  private evaluateWithConverters = async (
+    EvaluationRequestV2: EvaluationRequestV2
+  ): Promise<EvaluationResponse | undefined> => {
     // Compute contentModerationCheck from deprecated fields or use the new field
-    const contentModerationCheck = EvaluationRequestV2.contentModerationCheck || 
-      EvaluationRequestV2.dangerousContentCheck || 
-      EvaluationRequestV2.harassmentCheck || 
-      EvaluationRequestV2.hateSpeechCheck || 
+    const contentModerationCheck =
+      EvaluationRequestV2.contentModerationCheck ||
+      EvaluationRequestV2.dangerousContentCheck ||
+      EvaluationRequestV2.harassmentCheck ||
+      EvaluationRequestV2.hateSpeechCheck ||
       EvaluationRequestV2.sexualContentCheck;
 
-    const frameworkConverters: Record<Framework, () => CanonicalEvaluationStrategy<any, any>> = {
-      'openai': () => new OpenAICanonicalEvaluationStrategy(),
-      'vercelai': () => new VercelAICanonicalEvaluationStrategy(),
-      'gemini': () => new GeminiAICanonicalEvaluationStrategy(),
-      'claude': () => new ClaudeCanonicalEvaluationStrategy(),
+    const frameworkConverters: Record<
+      Framework,
+      () => CanonicalEvaluationStrategy<any, any>
+    > = {
+      openai: () => new OpenAICanonicalEvaluationStrategy(),
+      vercelai: () => new VercelAICanonicalEvaluationStrategy(),
+      gemini: () => new GeminiAICanonicalEvaluationStrategy(),
+      claude: () => new ClaudeCanonicalEvaluationStrategy(),
     };
 
     const supportedFrameworks = Object.keys(frameworkConverters);
     const converterFactory = frameworkConverters[EvaluationRequestV2.framework];
-    
+
     if (!converterFactory) {
-      throw new Error(`Unsupported framework: ${EvaluationRequestV2.framework}. Supported frameworks: ${supportedFrameworks.join(', ')}`);
+      throw new Error(
+        `Unsupported framework: ${
+          EvaluationRequestV2.framework
+        }. Supported frameworks: ${supportedFrameworks.join(', ')}`
+      );
     }
 
     const requestConverter = converterFactory();
 
-    
-    const evaluationRequest = await requestConverter.convertToQualifireEvaluationRequest(EvaluationRequestV2.request, EvaluationRequestV2.response)
+    const evaluationRequest =
+      await requestConverter.convertToQualifireEvaluationRequest(
+        EvaluationRequestV2.request,
+        EvaluationRequestV2.response
+      );
 
     const url = `${this.baseUrl}/api/evaluation/evaluate`;
     const body = {
@@ -281,11 +334,16 @@ export class Qualifire {
       content_moderation_check: contentModerationCheck,
       grounding_check: EvaluationRequestV2.groundingCheck,
       hallucinations_check: EvaluationRequestV2.hallucinationsCheck,
-      instructions_following_check: EvaluationRequestV2.instructionsFollowingCheck,
+      instructions_following_check:
+        EvaluationRequestV2.instructionsFollowingCheck,
       pii_check: EvaluationRequestV2.piiCheck,
       prompt_injections: EvaluationRequestV2.promptInjections,
       syntax_checks: EvaluationRequestV2.syntaxChecks,
-      tool_selection_quality_check: EvaluationRequestV2.toolSelectionQualityCheck,
+      tool_selection_quality_check:
+        EvaluationRequestV2.toolSelectionQualityCheck,
+      tool_use_quality_check: EvaluationRequestV2.toolUseQualityCheck,
+      tsq_mode: EvaluationRequestV2.tsqMode,
+      tuq_mode: EvaluationRequestV2.tuqMode,
       assertions: EvaluationRequestV2.assertions,
     };
 
