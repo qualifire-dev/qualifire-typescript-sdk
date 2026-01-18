@@ -270,3 +270,20 @@ export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
 export type LLMToolDefinition = z.infer<typeof LLMToolDefinitionSchema>;
 export type LLMToolCall = z.infer<typeof LLMToolCallSchema>;
 export type EvaluationRequestV2 = z.infer<typeof EvaluationRequestV2Schema>;
+
+const ToolResponseSchema = z.object({
+  type: z.string(),
+  function: LLMToolDefinitionSchema,
+});
+
+const CompilePromptResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  revision: z.number(),
+  messages: z.array(LLMMessageSchema),
+  tools: z.array(ToolResponseSchema),
+  parameters: z.record(z.string(), z.any()),
+});
+
+export type ToolResponse = z.infer<typeof ToolResponseSchema>;
+export type CompilePromptResponse = z.infer<typeof CompilePromptResponseSchema>;
