@@ -68,7 +68,7 @@ describe('EvaluationRequestSchema', () => {
           prompt_injections: false,
           sexual_content_check: false,
           syntax_checks: undefined,
-          tool_selection_quality_check: false,
+          toolUseQualityCheck: false,
           assertions: undefined,
         };
 
@@ -85,7 +85,7 @@ describe('EvaluationRequestSchema', () => {
     );
   });
 
-  describe('validate tool_selection_quality_check requirements', () => {
+  describe('validate toolUseQualityCheck requirements', () => {
     const testCases = [
       [true, null, null, true],
       [true, [], null, true],
@@ -108,8 +108,8 @@ describe('EvaluationRequestSchema', () => {
     ] as const;
 
     test.each(testCases)(
-      'tool_selection_quality_check: %p, messages: %p, available_tools: %p -> should fail: %p',
-      (tsq_check, messages, tools, shouldError) => {
+      'toolUseQualityCheck: %p, messages: %p, available_tools: %p -> should fail: %p',
+      (tuq_check, messages, tools, shouldError) => {
         const payload = {
           input: 'input', // included to bypass the input/output/messages check
           messages: messages ?? undefined,
@@ -123,7 +123,7 @@ describe('EvaluationRequestSchema', () => {
           prompt_injections: false,
           sexual_content_check: false,
           instructions_following_check: false,
-          tool_selection_quality_check: tsq_check,
+          toolUseQualityCheck: tuq_check,
         };
 
         if (shouldError) {

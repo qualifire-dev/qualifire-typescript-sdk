@@ -96,7 +96,9 @@ export const EvaluationRequestV2Schema = z.object({
   sexualContentCheck: z.boolean().default(false).optional(),
   contentModerationCheck: z.boolean().default(false).optional(),
   syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+  /** @deprecated Use toolUseQualityCheck instead */
   toolSelectionQualityCheck: z.boolean().default(false).optional(),
+  toolUseQualityCheck: z.boolean().default(false).optional(),
   assertions: z.array(z.string()).optional(),
   /** @deprecated Automatically added from the request*/
   available_tools: z.array(LLMToolDefinitionSchema).optional(),
@@ -120,9 +122,11 @@ export const EvaluationRequestV2Schema = z.object({
   sexual_content_check: z.boolean().default(false).optional(),
   /** @deprecated Use syntaxChecks instead */
   syntax_checks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
-  /** @deprecated Use toolSelectionQualityCheck instead */
+  /** @deprecated Use toolUseQualityCheck instead */
   tool_selection_quality_check: z.boolean().default(false).optional(),
-  tsqMode: z.enum(ModelModeEnum).default('balanced').optional(),
+  /** @deprecated Use tuqMode instead */
+  tsqMode: z.enum(ModelModeEnum).optional(),
+  tuqMode: z.enum(ModelModeEnum).optional(),
   consistencyMode: z.enum(ModelModeEnum).default('balanced').optional(),
   assertionsMode: z.enum(ModelModeEnum).default('balanced').optional(),
   groundingMode: z.enum(ModelModeEnum).default('balanced').optional(),
@@ -183,8 +187,12 @@ export const EvaluationProxyAPIRequestSchema = z
     sexualContentCheck: z.boolean().default(false).optional(),
     contentModerationCheck: z.boolean().default(false).optional(),
     syntaxChecks: z.record(z.string(), SyntaxCheckArgsSchema).optional(),
+    /** @deprecated Use toolUseQualityCheck instead */
     toolSelectionQualityCheck: z.boolean().default(false).optional(),
-    tsqMode: z.enum(ModelModeEnum).default('balanced').optional(),
+    toolUseQualityCheck: z.boolean().default(false).optional(),
+    /** @deprecated Use tuqMode instead */
+    tsqMode: z.enum(ModelModeEnum).optional(),
+    tuqMode: z.enum(ModelModeEnum).optional(),
     consistencyMode: z.enum(ModelModeEnum).default('balanced').optional(),
     assertionsMode: z.enum(ModelModeEnum).default('balanced').optional(),
     groundingMode: z.enum(ModelModeEnum).default('balanced').optional(),
@@ -215,8 +223,12 @@ export const EvaluationProxyAPIRequestSchema = z
       });
     }
 
-    // Validation: tool_selection_quality_check requires messages and available_tools
-    if (data.tool_selection_quality_check) {
+    // Validation: tool_selection_quality_check or toolSelectionQualityCheck or toolUseQualityCheck requires messages and available_tools
+    if (
+      data.tool_selection_quality_check ||
+      data.toolSelectionQualityCheck ||
+      data.toolUseQualityCheck
+    ) {
       const hasAvailableTools =
         Array.isArray(data.available_tools) && data.available_tools.length > 0;
 
@@ -224,7 +236,7 @@ export const EvaluationProxyAPIRequestSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            'messages must be provided when tool_selection_quality_check is true',
+            'messages must be provided when tool quality check is enabled',
           path: ['messages'],
         });
       }
@@ -232,7 +244,7 @@ export const EvaluationProxyAPIRequestSchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message:
-            'available_tools must be provided when tool_selection_quality_check is true',
+            'available_tools must be provided when tool quality check is enabled',
           path: ['available_tools'],
         });
       }
@@ -267,3 +279,20 @@ export type EvaluationResponse = z.infer<typeof EvaluationResponseSchema>;
 export type LLMToolDefinition = z.infer<typeof LLMToolDefinitionSchema>;
 export type LLMToolCall = z.infer<typeof LLMToolCallSchema>;
 export type EvaluationRequestV2 = z.infer<typeof EvaluationRequestV2Schema>;
+
+const ToolResponseSchema = z.object({
+  type: z.string(),
+  function: LLMToolDefinitionSchema,
+});
+
+const CompilePromptResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  revision: z.number(),
+  messages: z.array(LLMMessageSchema),
+  tools: z.array(ToolResponseSchema),
+  parameters: z.record(z.string(), z.any()),
+});
+
+export type ToolResponse = z.infer<typeof ToolResponseSchema>;
+export type CompilePromptResponse = z.infer<typeof CompilePromptResponseSchema>;

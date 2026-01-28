@@ -5,15 +5,17 @@ import { GeminiAICanonicalEvaluationStrategy } from './frameworks/gemini/gemini-
 import { OpenAICanonicalEvaluationStrategy } from './frameworks/openai/openai-converter';
 import { VercelAICanonicalEvaluationStrategy } from './frameworks/vercelai/vercelai-converter';
 import {
+  type CompilePromptResponse,
   EvaluationProxyAPIRequest,
   EvaluationProxyAPIRequestSchema,
-  EvaluationRequestV2Schema,
   type EvaluationRequestV2,
+  EvaluationRequestV2Schema,
   type EvaluationResponse,
   type Framework,
 } from './types';
 
 export type {
+  CompilePromptResponse,
   EvaluationProxyAPIRequest,
   EvaluationRequestV2,
   EvaluationResponse,
@@ -21,6 +23,7 @@ export type {
   LLMMessage,
   ModelMode,
   PolicyTarget,
+  ToolResponse,
 } from './types';
 
 /**
@@ -118,7 +121,7 @@ export class Qualifire {
    *  instructionsFollowingCheck: true,
    *  piiCheck: true,
    *  promptInjections: true,
-   *  toolSelectionQualityCheck: false,
+   *  toolUseQualityCheck: false, // Use this instead of deprecated toolSelectionQualityCheck
    * });
    *
    * // If you are using streaming mode.
@@ -256,9 +259,12 @@ export class Qualifire {
       syntax_checks:
         evaluationProxyAPIRequest.syntax_checks ||
         evaluationProxyAPIRequest.syntaxChecks,
-      tool_selection_quality_check:
-        evaluationProxyAPIRequest.tool_selection_quality_check ||
-        evaluationProxyAPIRequest.toolSelectionQualityCheck,
+      tool_use_quality_check:
+        evaluationProxyAPIRequest.toolUseQualityCheck ||
+        evaluationProxyAPIRequest.toolSelectionQualityCheck ||
+        evaluationProxyAPIRequest.tool_selection_quality_check,
+      tuq_mode:
+        evaluationProxyAPIRequest.tuqMode ?? evaluationProxyAPIRequest.tsqMode,
       assertions: evaluationProxyAPIRequest.assertions,
       topic_scoping_mode:
         evaluationProxyAPIRequest.topicScopingMode ??
@@ -345,8 +351,11 @@ export class Qualifire {
       pii_check: EvaluationRequestV2.piiCheck,
       prompt_injections: EvaluationRequestV2.promptInjections,
       syntax_checks: EvaluationRequestV2.syntaxChecks,
-      tool_selection_quality_check:
-        EvaluationRequestV2.toolSelectionQualityCheck,
+      tool_use_quality_check:
+        EvaluationRequestV2.toolUseQualityCheck ||
+        EvaluationRequestV2.toolSelectionQualityCheck ||
+        EvaluationRequestV2.tool_selection_quality_check,
+      tuq_mode: EvaluationRequestV2.tuqMode ?? EvaluationRequestV2.tsqMode,
       assertions: EvaluationRequestV2.assertions,
       topic_scoping_mode: EvaluationRequestV2.topicScopingMode,
       topic_scoping_multi_turn_mode:
@@ -424,5 +433,67 @@ export class Qualifire {
 
     const jsonResponse = await response.json();
     return jsonResponse as EvaluationResponse;
+  };
+
+  /**
+   * Compiles a prompt from Qualifire Studio with the specified parameters.
+   *
+   * @param promptId - The ID of the prompt to compile.
+   * @param revisionId - Optional revision ID to use. If not provided, uses the latest revision.
+   * @param params - Optional dictionary of parameters to substitute in the prompt template.
+   * @returns A CompilePromptResponse containing the compiled prompt details.
+   *
+   * @example
+   * ```ts
+   * const qualifire = new Qualifire({ apiKey: 'your_api_key' });
+   *
+   * const response = await qualifire.compilePrompt({
+   *   promptId: 'prompt-123',
+   *   revisionId: 'rev-456',
+   *   params: {
+   *     user_name: 'John',
+   *     language: 'French'
+   *   }
+   * });
+   *
+   * console.log(response.messages);
+   * console.log(response.tools);
+   * ```
+   */
+  compilePrompt = async ({
+    promptId,
+    revisionId,
+    params,
+  }: {
+    promptId: string;
+    revisionId?: string;
+    params?: Record<string, string>;
+  }): Promise<CompilePromptResponse> => {
+    let url = `${this.baseUrl}/api/v1/studio/prompts/${promptId}/compile`;
+    if (revisionId) {
+      url = `${url}?revision=${revisionId}`;
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Qualifire-API-Key': this.sdkKey,
+    };
+
+    const body = JSON.stringify({
+      variables: params || {},
+    });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Qualifire API error: ${response.statusText}`);
+    }
+
+    const jsonResponse = await response.json();
+    return jsonResponse as CompilePromptResponse;
   };
 }
