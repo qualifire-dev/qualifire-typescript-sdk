@@ -2,15 +2,15 @@ import { z } from 'zod';
 
 // Framework type based on supported frameworks
 const FrameworkEnum = ['openai', 'vercelai', 'gemini', 'claude'] as const;
-export type Framework = typeof FrameworkEnum[number];
+export type Framework = (typeof FrameworkEnum)[number];
 
 // Model mode enum
 const ModelModeEnum = ['speed', 'balanced', 'quality'] as const;
-export type ModelMode = typeof ModelModeEnum[number];
+export type ModelMode = (typeof ModelModeEnum)[number];
 
 // Policy target enum
 const PolicyTargetEnum = ['input', 'output', 'both'] as const;
-export type PolicyTarget = typeof PolicyTargetEnum[number];
+export type PolicyTarget = (typeof PolicyTargetEnum)[number];
 
 export const messageSchema = z.object({
   role: z.string(),
@@ -130,6 +130,9 @@ export const EvaluationRequestV2Schema = z.object({
   groundingMultiTurnMode: z.boolean().default(false).optional(),
   policyMultiTurnMode: z.boolean().default(false).optional(),
   policyTarget: z.enum(PolicyTargetEnum).optional(),
+  topicScopingMode: z.enum(ModelModeEnum).default('balanced').optional(),
+  topicScopingMultiTurnMode: z.boolean().default(false).optional(),
+  topicScopingTarget: z.enum(PolicyTargetEnum).optional(),
 });
 
 export const EvaluationProxyAPIRequestSchema = z
@@ -189,6 +192,12 @@ export const EvaluationProxyAPIRequestSchema = z
     groundingMultiTurnMode: z.boolean().default(false).optional(),
     policyMultiTurnMode: z.boolean().default(false).optional(),
     policyTarget: z.enum(PolicyTargetEnum).optional(),
+    topic_scoping_mode: z.enum(ModelModeEnum).default('balanced').optional(),
+    topic_scoping_multi_turn_mode: z.boolean().default(false).optional(),
+    topic_scoping_target: z.enum(PolicyTargetEnum).optional(),
+    topicScopingMode: z.enum(ModelModeEnum).default('balanced').optional(),
+    topicScopingMultiTurnMode: z.boolean().default(false).optional(),
+    topicScopingTarget: z.enum(PolicyTargetEnum).optional(),
   })
   .superRefine((data, ctx) => {
     const hasMessages =
