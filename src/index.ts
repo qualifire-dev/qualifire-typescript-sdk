@@ -266,6 +266,15 @@ export class Qualifire {
       tuq_mode:
         evaluationProxyAPIRequest.tuqMode ?? evaluationProxyAPIRequest.tsqMode,
       assertions: evaluationProxyAPIRequest.assertions,
+      topic_scoping_mode:
+        evaluationProxyAPIRequest.topicScopingMode ??
+        evaluationProxyAPIRequest.topic_scoping_mode,
+      topic_scoping_multi_turn_mode:
+        evaluationProxyAPIRequest.topicScopingMultiTurnMode ??
+        evaluationProxyAPIRequest.topic_scoping_multi_turn_mode,
+      topic_scoping_target:
+        evaluationProxyAPIRequest.topicScopingTarget ??
+        evaluationProxyAPIRequest.topic_scoping_target,
     };
 
     const headers = {
@@ -348,6 +357,10 @@ export class Qualifire {
         EvaluationRequestV2.tool_selection_quality_check,
       tuq_mode: EvaluationRequestV2.tuqMode ?? EvaluationRequestV2.tsqMode,
       assertions: EvaluationRequestV2.assertions,
+      topic_scoping_mode: EvaluationRequestV2.topicScopingMode,
+      topic_scoping_multi_turn_mode:
+        EvaluationRequestV2.topicScopingMultiTurnMode,
+      topic_scoping_target: EvaluationRequestV2.topicScopingTarget,
     };
 
     const headers = {
