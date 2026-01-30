@@ -275,6 +275,7 @@ export class Qualifire {
       topic_scoping_target:
         evaluationProxyAPIRequest.topicScopingTarget ??
         evaluationProxyAPIRequest.topic_scoping_target,
+      metadata: evaluationProxyAPIRequest.metadata,
     };
 
     const headers = {
@@ -361,6 +362,8 @@ export class Qualifire {
       topic_scoping_multi_turn_mode:
         EvaluationRequestV2.topicScopingMultiTurnMode,
       topic_scoping_target: EvaluationRequestV2.topicScopingTarget,
+      allowed_topics: EvaluationRequestV2.allowedTopics,
+      metadata: EvaluationRequestV2.metadata,
     };
 
     const headers = {
@@ -404,16 +407,19 @@ export class Qualifire {
     input,
     output,
     evaluationId,
+    metadata,
   }: {
     input: string;
     output: string;
     evaluationId: string;
+    metadata?: Record<string, string>;
   }): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluation/invoke`;
     const body = JSON.stringify({
       input,
       output,
       evaluation_id: evaluationId,
+      metadata,
     });
 
     const headers = {

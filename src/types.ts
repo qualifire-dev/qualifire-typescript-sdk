@@ -137,6 +137,8 @@ export const EvaluationRequestV2Schema = z.object({
   topicScopingMode: z.enum(ModelModeEnum).default('balanced').optional(),
   topicScopingMultiTurnMode: z.boolean().default(false).optional(),
   topicScopingTarget: z.enum(PolicyTargetEnum).optional(),
+  allowedTopics: z.array(z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 });
 
 export const EvaluationProxyAPIRequestSchema = z
@@ -206,6 +208,8 @@ export const EvaluationProxyAPIRequestSchema = z
     topicScopingMode: z.enum(ModelModeEnum).default('balanced').optional(),
     topicScopingMultiTurnMode: z.boolean().default(false).optional(),
     topicScopingTarget: z.enum(PolicyTargetEnum).optional(),
+    allowedTopics: z.array(z.string()).optional(),
+    metadata: z.record(z.string(), z.string()).optional(),
   })
   .superRefine((data, ctx) => {
     const hasMessages =
