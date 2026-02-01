@@ -235,7 +235,7 @@ export class Qualifire {
       evaluationProxyAPIRequest.sexual_content_check ||
       evaluationProxyAPIRequest.sexualContentCheck;
 
-    const url = `${this.baseUrl}/api/evaluation/evaluate`;
+    const url = `${this.baseUrl}/api/v1/evaluation/evaluate`;
     const body = {
       input: evaluationProxyAPIRequest.input,
       output: evaluationProxyAPIRequest.output,
@@ -349,7 +349,7 @@ export class Qualifire {
         EvaluationRequestV2.response
       );
 
-    const url = `${this.baseUrl}/api/evaluation/evaluate`;
+    const url = `${this.baseUrl}/api/v1/evaluation/evaluate`;
     const body = {
       messages: evaluationRequest.messages,
       available_tools: evaluationRequest.available_tools,
@@ -431,7 +431,7 @@ export class Qualifire {
     }>;
     metadata?: Record<string, string>;
   }): Promise<EvaluationResponse | undefined> => {
-    const url = `${this.baseUrl}/api/evaluation/invoke`;
+    const url = `${this.baseUrl}/api/v1/evaluation/invoke`;
     const body = JSON.stringify({
       input,
       output,
