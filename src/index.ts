@@ -60,8 +60,11 @@ export class Qualifire {
   init(): void {
     process.env.TRACELOOP_TELEMETRY = 'false';
 
+    const tracingBaseUrl =
+      process.env.QUALIFIRE_TRACING_URL || 'https://tracing.qualifire.ai';
+
     traceloop.initialize({
-      baseUrl: `${this.baseUrl}/api/telemetry`,
+      baseUrl: `${tracingBaseUrl}/api/telemetry`,
       headers: {
         'X-Qualifire-API-Key': this.sdkKey,
       },
