@@ -12,6 +12,7 @@ import {
   EvaluationRequestV2Schema,
   type EvaluationResponse,
   type Framework,
+  type LLMMessage,
 } from './types';
 
 export type {
@@ -44,7 +45,7 @@ export class Qualifire {
   constructor({ apiKey, baseUrl }: { apiKey?: string; baseUrl?: string }) {
     const key = apiKey || process.env.QUALIFIRE_API_KEY;
     const qualifireBaseUrl =
-      baseUrl || process.env.QUALIFIRE_BASE_URL || 'https://proxy.qualifire.ai';
+      baseUrl || process.env.QUALIFIRE_BASE_URL || 'https://api.qualifire.ai';
 
     if (!key) {
       throw new Error(
@@ -266,6 +267,14 @@ export class Qualifire {
       tuq_mode:
         evaluationProxyAPIRequest.tuqMode ?? evaluationProxyAPIRequest.tsqMode,
       assertions: evaluationProxyAPIRequest.assertions,
+      assertions_mode: evaluationProxyAPIRequest.assertionsMode,
+      hallucinations_mode: evaluationProxyAPIRequest.hallucinationsMode,
+      grounding_mode: evaluationProxyAPIRequest.groundingMode,
+      grounding_multi_turn_mode:
+        evaluationProxyAPIRequest.groundingMultiTurnMode,
+      policy_multi_turn_mode: evaluationProxyAPIRequest.policyMultiTurnMode,
+      policy_target: evaluationProxyAPIRequest.policyTarget,
+      allowed_topics: evaluationProxyAPIRequest.allowedTopics,
       topic_scoping_mode:
         evaluationProxyAPIRequest.topicScopingMode ??
         evaluationProxyAPIRequest.topic_scoping_mode,
@@ -407,11 +416,19 @@ export class Qualifire {
     input,
     output,
     evaluationId,
+    messages,
+    availableTools,
     metadata,
   }: {
-    input: string;
-    output: string;
+    input?: string;
+    output?: string;
     evaluationId: string;
+    messages?: LLMMessage[];
+    availableTools?: Array<{
+      name: string;
+      description?: string;
+      parameters?: Record<string, unknown>;
+    }>;
     metadata?: Record<string, string>;
   }): Promise<EvaluationResponse | undefined> => {
     const url = `${this.baseUrl}/api/evaluation/invoke`;
@@ -419,6 +436,8 @@ export class Qualifire {
       input,
       output,
       evaluation_id: evaluationId,
+      messages,
+      available_tools: availableTools,
       metadata,
     });
 
