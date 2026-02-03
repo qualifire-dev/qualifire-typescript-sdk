@@ -12,6 +12,7 @@ import {
   EvaluationRequestV2Schema,
   type EvaluationResponse,
   type Framework,
+  type LLMMessage,
 } from './types';
 
 export type {
@@ -44,7 +45,7 @@ export class Qualifire {
   constructor({ apiKey, baseUrl }: { apiKey?: string; baseUrl?: string }) {
     const key = apiKey || process.env.QUALIFIRE_API_KEY;
     const qualifireBaseUrl =
-      baseUrl || process.env.QUALIFIRE_BASE_URL || 'https://proxy.qualifire.ai';
+      baseUrl || process.env.QUALIFIRE_BASE_URL || 'https://api.qualifire.ai';
 
     if (!key) {
       throw new Error(
@@ -59,8 +60,11 @@ export class Qualifire {
   init(): void {
     process.env.TRACELOOP_TELEMETRY = 'false';
 
+    const tracingBaseUrl =
+      process.env.QUALIFIRE_TRACING_URL || 'https://tracing.qualifire.ai';
+
     traceloop.initialize({
-      baseUrl: `${this.baseUrl}/api/telemetry`,
+      baseUrl: `${tracingBaseUrl}/api/telemetry`,
       headers: {
         'X-Qualifire-API-Key': this.sdkKey,
       },
@@ -234,7 +238,7 @@ export class Qualifire {
       evaluationProxyAPIRequest.sexual_content_check ||
       evaluationProxyAPIRequest.sexualContentCheck;
 
-    const url = `${this.baseUrl}/api/evaluation/evaluate`;
+    const url = `${this.baseUrl}/api/v1/evaluation/evaluate`;
     const body = {
       input: evaluationProxyAPIRequest.input,
       output: evaluationProxyAPIRequest.output,
@@ -266,6 +270,14 @@ export class Qualifire {
       tuq_mode:
         evaluationProxyAPIRequest.tuqMode ?? evaluationProxyAPIRequest.tsqMode,
       assertions: evaluationProxyAPIRequest.assertions,
+      assertions_mode: evaluationProxyAPIRequest.assertionsMode,
+      hallucinations_mode: evaluationProxyAPIRequest.hallucinationsMode,
+      grounding_mode: evaluationProxyAPIRequest.groundingMode,
+      grounding_multi_turn_mode:
+        evaluationProxyAPIRequest.groundingMultiTurnMode,
+      policy_multi_turn_mode: evaluationProxyAPIRequest.policyMultiTurnMode,
+      policy_target: evaluationProxyAPIRequest.policyTarget,
+      allowed_topics: evaluationProxyAPIRequest.allowedTopics,
       topic_scoping_mode:
         evaluationProxyAPIRequest.topicScopingMode ??
         evaluationProxyAPIRequest.topic_scoping_mode,
@@ -340,7 +352,7 @@ export class Qualifire {
         EvaluationRequestV2.response
       );
 
-    const url = `${this.baseUrl}/api/evaluation/evaluate`;
+    const url = `${this.baseUrl}/api/v1/evaluation/evaluate`;
     const body = {
       messages: evaluationRequest.messages,
       available_tools: evaluationRequest.available_tools,
@@ -407,18 +419,28 @@ export class Qualifire {
     input,
     output,
     evaluationId,
+    messages,
+    availableTools,
     metadata,
   }: {
-    input: string;
-    output: string;
+    input?: string;
+    output?: string;
     evaluationId: string;
+    messages?: LLMMessage[];
+    availableTools?: Array<{
+      name: string;
+      description?: string;
+      parameters?: Record<string, unknown>;
+    }>;
     metadata?: Record<string, string>;
   }): Promise<EvaluationResponse | undefined> => {
-    const url = `${this.baseUrl}/api/evaluation/invoke`;
+    const url = `${this.baseUrl}/api/v1/evaluation/invoke`;
     const body = JSON.stringify({
       input,
       output,
       evaluation_id: evaluationId,
+      messages,
+      available_tools: availableTools,
       metadata,
     });
 
