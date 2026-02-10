@@ -276,6 +276,7 @@ export class Qualifire {
       grounding_multi_turn_mode:
         evaluationProxyAPIRequest.groundingMultiTurnMode,
       policy_multi_turn_mode: evaluationProxyAPIRequest.policyMultiTurnMode,
+      policy_include_tools: evaluationProxyAPIRequest.policyIncludeTools,
       policy_target: evaluationProxyAPIRequest.policyTarget,
       allowed_topics: evaluationProxyAPIRequest.allowedTopics,
       topic_scoping_mode:
@@ -370,6 +371,10 @@ export class Qualifire {
         EvaluationRequestV2.tool_selection_quality_check,
       tuq_mode: EvaluationRequestV2.tuqMode ?? EvaluationRequestV2.tsqMode,
       assertions: EvaluationRequestV2.assertions,
+      assertions_mode: EvaluationRequestV2.assertionsMode,
+      policy_multi_turn_mode: EvaluationRequestV2.policyMultiTurnMode,
+      policy_include_tools: EvaluationRequestV2.policyIncludeTools,
+      policy_target: EvaluationRequestV2.policyTarget,
       topic_scoping_mode: EvaluationRequestV2.topicScopingMode,
       topic_scoping_multi_turn_mode:
         EvaluationRequestV2.topicScopingMultiTurnMode,
